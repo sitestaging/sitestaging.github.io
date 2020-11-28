@@ -1,0 +1,71 @@
+<!DOCTYPE HTML>
+<html lang="en">
+        <head>
+        <title>Raphael Karger</title>
+        <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+        <meta charset="utf-8" />
+        <meta name="description" content="Raphael Karger's Resume and Social Media Links.">
+        <meta name="author" content="Raphael Karger">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="assets/css/terminal_effects.css" />
+        <link rel="stylesheet" href="assets/css/main.css" />
+        <script src="assets/js/terminal.js"></script>
+        <script src="assets/js/baffle.min.js"></script>
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-F1RWL7B7C0"></script>
+        <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-F1RWL7B7C0');
+        setTimeout(function() {
+        let skills = baffle('.crypto', {
+                characters: 'abcdef0123456789',
+                speed: 80
+                }).start();
+                skills.reveal(1000, 2500);}, 2600)
+                console.log("Jando is epic https://jan.do")
+        </script>
+        </head>
+        <body class="is-preload">
+                <div id="wrapper">
+                        <div id="bg"></div>
+                        <!-- <div id="overlay"></div> -->
+                        <div id="main">
+                                <!-- Header -->
+                                        <header id="header">
+                                                <h1><div class='console-container'><span id='text'></span><div class='console-underscore' id='console'>&#95;</div></div></h1>
+                                                <p><span class="crypto">Developer</span> &nbsp;&bull;&nbsp; <span class="crypto">Security Researcher</span> &nbsp;&bull;&nbsp; <span class="crypto">Student</span></p>
+                                                <nav>
+                                                        <ul>
+                                                                <li title="Email"><a href="mailto:raphael@karger.is" aria-label="Email" class="icon solid fa-envelope" target="_blank"><span class="label">Email</span></a></li>
+                                                                <li title="Resume"><a href="/resume.pdf" aria-label="Resume" class="icon solid fa-file-alt" target="_blank"><span class="label">Resume</span></a></li>
+                                                                <li title="Blog"><a href="https://blog.raphael.karger.is" aria-label="Blog" class="fas fa-blog" target="_blank"><span class="label">Blog</span></a></li>
+                                                                <li title="Github"><a href="https://github.com/rek7" aria-label="Github" class="icon brands fa-github" target="_blank"><span class="label">Github</span></a></li>
+                                                                <li title="Linkedin"><a href="https://www.linkedin.com/in/raphael-karger/" aria-label="Linkedin" class="icon brands fa-linkedin" target="_blank"><span class="label">Linkedin</span></a></li>
+                                                        </ul>
+                                                </nav>
+                                        </header>
+                        </div>
+                </div>
+                <div class="waves">
+                        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+                                <defs>
+                                <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+                                </defs>
+                                <g class="parallax">
+                                <use xlink:href="#gentle-wave" x="48" y="0" fill="rgba(255,255,255,0.5)" />
+                                <use xlink:href="#gentle-wave" x="48" y="3" fill="rgba(255,255,255,0.4)" />
+                                <use xlink:href="#gentle-wave" x="48" y="5" fill="rgba(255,255,255,0.3)" />
+                                <use xlink:href="#gentle-wave" x="48" y="7" fill="rgba(255,255,255,0.2)" />
+                                </g>
+                        </svg>
+                </div>
+                <script>
+                        window.onload = function() { document.body.classList.remove('is-preload'); }
+                        window.ontouchmove = function() { return false; }
+                        window.onorientationchange = function() { document.body.scrollTop = 0; }
+                </script>
+        </body>
+</html>
