@@ -1,5 +1,5 @@
 window.addEventListener('load', function() {
-  setTimeout(function() {console_text('Raphael Karger', 'text', 'white')}, 2600)
+  setTimeout(function() {console_text('Raphael Karger', 'text', 'white')}, 2400)
 })
 
 function console_text(txt, id, color) {

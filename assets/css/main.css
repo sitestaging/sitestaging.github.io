@@ -31,6 +31,14 @@
 
 }
 
+@media screen and (max-width: 720px) {
+
+	.waves {
+		height: 15vh;
+	}
+
+}
+
 @keyframes fade_in_waves {
 	0%   { opacity: 0; }
 	30% { opacity: 0; }
