@@ -292,7 +292,7 @@ input, select, textarea {
 		-ms-transform: translate3d(0,0,0);
 		transform: translate3d(0,0,0); */
 	/* Set your background with this */
-		background: linear-gradient(45deg, rgba(255,255,255,.25) 0%, rgba(52,140,178,1) 100%) center center fixed;
+		background: linear-gradient(45deg, rgba(12, 10, 133,.25) 0%, rgb(12, 10, 133) 100%) center center fixed;
 		background-size: cover!important;
 		/* background: #348cb2 bottom left; */
 		/* background-repeat: repeat-x; */
