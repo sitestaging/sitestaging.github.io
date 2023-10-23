@@ -7,6 +7,7 @@
 	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
 */
 
+
 .waves {
   /* position: exact; */
   position: absolute;
@@ -29,6 +30,7 @@
 
 }
 */
+
 @media screen and (max-width: 720px) {
 
 	.waves {
@@ -38,6 +40,15 @@
 	}
 
 } 
+
+@media screen and (max-width: 480px) {
+    .waves {
+        height: 25vh;
+		margin : 0 auto;
+		margin-bottom : -1em;
+        /* Any other adjustments for very small screens */
+    }
+}
 
 @keyframes fade_in_waves {
 	0%   { opacity: 0; }
