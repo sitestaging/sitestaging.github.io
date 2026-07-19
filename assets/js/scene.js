@@ -125,12 +125,14 @@ function moonState(date, sun) {
 	var phi = Math.acos(clamp(
 		Math.sin(s.dec) * Math.sin(m.dec) + Math.cos(s.dec) * Math.cos(m.dec) * Math.cos(s.ra - m.ra), -1, 1));
 	return {
-		alt: pos.alt,
-		az: pos.az,
 		frac: (1 - Math.cos(phi)) / 2,               // illuminated fraction
 		waxing: Math.sin(lm - ls) > 0,               // lit limb west (right) when waxing
-		vis: clamp((-5 - sun.alt) / 6, 0, 1)         // only once the sun is well down
-		   * clamp(pos.alt / 8, 0, 1)                // and only if it is really up
+		vis: clamp((-5 - sun.alt) / 6, 0, 1),        // shown once the sun is well down
+		// real position, blended toward a counterweight arc when the real
+		// moon is below the horizon so a dark sky is never empty
+		w: clamp((pos.alt - 2) / 10, 0, 1),
+		real: { alt: pos.alt, az: pos.az },
+		arc: { alt: clamp(24 - sun.alt * 1.25, 24, 52), az: (sun.az + 180) % 360 }
 	};
 }
 
@@ -185,8 +187,9 @@ for (var li = 0; li < 5; li++) {
 		f2: (0.5 + 0.11 * li) * 2.3,
 		ph1: li * 1.7,
 		ph2: li * 2.9 + 1.1,
-		sp1: (0.10 + 0.02 * li) * (li % 2 ? -1 : 1),
-		sp2: -(0.16 + 0.02 * li) * (li % 2 ? -1 : 1)
+		// one shared direction, front layers rolling visibly faster (parallax)
+		sp1: -(0.12 + 0.08 * li),
+		sp2: -(0.30 + 0.18 * li)
 	});
 }
 
@@ -195,16 +198,19 @@ var CLOUDS = [
 	{ x0: 0.68, y: 0.32, rx: 0.24, ry: 0.045, sp: -2.6, off: 0 }
 ];
 
-// Sea state follows the sun the way a real day on the water does:
-// glassy and slow at night and dawn, waking through the morning,
-// choppiest with the afternoon breeze, settling again at dusk.
-function seaState(sun) {
+// Sea state follows the sun and the moon the way real water does:
+// glassy at dawn, waking through the morning, choppiest with the
+// afternoon breeze, settling at dusk — and at night the swell rises
+// with the moon, spring-tide style: a full moon rolls far more water
+// than a sliver.
+function seaState(sun, moon) {
 	var daylight = clamp((sun.alt + 6) / 26, 0, 1);
 	var afternoon = clamp(sun.H / 55, 0, 1) * daylight;
+	var tide = (0.1 + 0.9 * moon.frac) * (1 - 0.6 * daylight);
 	return {
-		energy: 0.72 + 0.30 * daylight + 0.16 * afternoon, // primary swell height
-		chop: 0.50 + 0.55 * daylight + 0.40 * afternoon,   // secondary ripple
-		tempo: 0.60 + 0.50 * daylight + 0.30 * afternoon   // how fast it all moves
+		energy: 0.74 + 0.28 * daylight + 0.22 * afternoon + 0.30 * tide, // swell height
+		chop: 0.40 + 0.70 * daylight + 0.55 * afternoon,                 // secondary ripple
+		tempo: 0.85 + 0.40 * daylight + 0.35 * afternoon + 0.35 * tide   // speed of it all
 	};
 }
 
@@ -223,7 +229,7 @@ function radial(x, y, r, stops) {
 
 function draw(dt, sun, pal, moon) {
 	var p = toScreen(sun.alt, sun.az, W, H);
-	var sea = seaState(sun);
+	var sea = seaState(sun, moon);
 
 	// advance the scene's clocks (dt = 0 renders a static frame)
 	for (var pi = 0; pi < LAYERS.length; pi++) {
@@ -244,7 +250,9 @@ function draw(dt, sun, pal, moon) {
 	// actually above the horizon on a dark sky
 	var mp = null;
 	if (moon.vis > 0.01) {
-		mp = toScreen(moon.alt, moon.az, W, H);
+		var ma = toScreen(moon.arc.alt, moon.arc.az, W, H);
+		var mr = toScreen(moon.real.alt, moon.real.az, W, H);
+		mp = { x: ma.x + (mr.x - ma.x) * moon.w, y: ma.y + (mr.y - ma.y) * moon.w };
 		var r = 15;
 		ctx.fillStyle = radial(mp.x, mp.y, 80, [
 			[0, css(pal.halo, (0.06 + 0.09 * moon.frac) * moon.vis)], [1, css(pal.halo, 0)]
