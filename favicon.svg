@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+	<!-- miniature of the scene, colors from the daytime palette stops -->
+	<defs>
+		<radialGradient id="sky" cx="62%" cy="18%" r="95%">
+			<stop offset="0" stop-color="#d3d7f8"/>
+			<stop offset="0.45" stop-color="#969ce8"/>
+			<stop offset="1" stop-color="#5b60c4"/>
+		</radialGradient>
+		<radialGradient id="glow" cx="50%" cy="50%" r="50%">
+			<stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+			<stop offset="0.35" stop-color="#ffffff" stop-opacity="0.35"/>
+			<stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+		</radialGradient>
+		<clipPath id="r"><rect width="64" height="64" rx="12"/></clipPath>
+	</defs>
+	<g clip-path="url(#r)">
+		<rect width="64" height="64" fill="url(#sky)"/>
+		<circle cx="40" cy="15" r="14" fill="url(#glow)"/>
+		<circle cx="40" cy="15" r="4.4" fill="#ffffff"/>
+		<path d="M0 36 C 14 30, 26 42, 40 38 S 58 30, 64 34 V64 H0 Z" fill="#a8acde" opacity="0.55"/>
+		<path d="M0 45 C 12 39, 30 51, 44 45 S 60 39, 64 43 V64 H0 Z" fill="#c6c9ee" opacity="0.75"/>
+		<path d="M0 54 C 16 48, 34 59, 50 53 S 62 49, 64 51 V64 H0 Z" fill="#f6f7fd" opacity="0.95"/>
+	</g>
+</svg>
