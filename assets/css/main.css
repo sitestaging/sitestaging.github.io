@@ -1,0 +1,282 @@
+/* ---------- fonts (self-hosted) ---------- */
+
+@font-face {
+	font-family: 'Bricolage Grotesque';
+	src: url('../fonts/BricolageGrotesque-var.woff2') format('woff2');
+	font-weight: 200 800;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'IBM Plex Mono';
+	src: url('../fonts/IBMPlexMono-400.woff2') format('woff2');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'IBM Plex Mono';
+	src: url('../fonts/IBMPlexMono-500.woff2') format('woff2');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+/* ---------- base ---------- */
+
+:root {
+	/* text protection: these exist so the sun can pass directly behind the
+	   content at any hour without destroying legibility. Do not remove. */
+	--shadow-display: 0 2px 26px rgba(35, 38, 96, 0.5);
+	--shadow-small: 0 1px 3px rgba(35, 38, 96, 0.45), 0 2px 12px rgba(35, 38, 96, 0.4);
+	--mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+	font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+	color: #fff;
+	background: #14163a;
+	overflow: hidden;
+}
+
+:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.75); outline-offset: 2px; }
+
+/* ---------- scene layers ---------- */
+
+#scene {
+	position: fixed;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	animation: fade-in 1.6s ease both;
+}
+
+.grain {
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	opacity: 0.035;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.scrim {
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	background: radial-gradient(90% 72% at 50% 44%, rgba(22, 24, 64, 0.22), rgba(22, 24, 64, 0) 70%);
+}
+
+/* ---------- content ---------- */
+
+main {
+	position: fixed;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	padding: 0 1.2rem;
+}
+
+h1 {
+	font-size: clamp(2.7rem, 7.5vw, 5.4rem);
+	font-weight: 800;
+	letter-spacing: -0.015em;
+	line-height: 1.02;
+	text-shadow: var(--shadow-display);
+	animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s both;
+}
+
+.cursor {
+	display: inline-block;
+	margin-left: 0.06em;
+	animation: blink 1.15s steps(1, end) infinite;
+}
+
+@keyframes blink {
+	0% { opacity: 1; }
+	50% { opacity: 0; }
+	100% { opacity: 1; }
+}
+
+.roles {
+	margin-top: 1rem;
+	font-weight: 400;
+	font-size: clamp(0.95rem, 2.3vw, 1.15rem);
+	letter-spacing: 0.01em;
+	opacity: 0.92;
+	text-shadow: var(--shadow-small);
+	animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s both;
+}
+
+.links {
+	margin-top: 1.7rem;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.6rem;
+	animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.45s both;
+}
+
+.pill {
+	font-weight: 400;
+	font-size: 0.95rem;
+	color: #fff;
+	text-decoration: none;
+	padding: 0.5em 1.3em;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.26);
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
+	text-shadow: var(--shadow-small);
+	transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.pill:hover { background: rgba(255, 255, 255, 0.19); transform: translateY(-1px); }
+
+#fp {
+	margin-top: 2rem;
+	position: relative;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.5em;
+	background: none;
+	border: 0;
+	color: #fff;
+	font-family: var(--mono);
+	font-weight: 400;
+	font-size: clamp(0.62rem, 1.8vw, 0.78rem);
+	letter-spacing: 0.06em;
+	cursor: pointer;
+	text-shadow: var(--shadow-small);
+	animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.6s both;
+}
+
+#fp .g { opacity: 0.95; }
+#fp .g:nth-child(even) { opacity: 0.55; }
+
+#fp-note {
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	transform: translate(-50%, 0.7em);
+	font-size: 0.9em;
+	opacity: 0;
+	transition: opacity 0.35s ease;
+	pointer-events: none;
+}
+
+#fp-note.show { opacity: 0.85; }
+
+/* ---------- status chip + panel ---------- */
+
+#chip {
+	position: fixed;
+	top: 14px;
+	right: 14px;
+	z-index: 5;
+	display: flex;
+	align-items: center;
+	gap: 0.6em;
+	font-family: var(--mono);
+	font-weight: 500;
+	font-size: 0.72rem;
+	color: #fff;
+	background: rgba(255, 255, 255, 0.09);
+	border: 1px solid rgba(255, 255, 255, 0.22);
+	border-radius: 999px;
+	padding: 0.55em 1em;
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
+	cursor: pointer;
+	animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.85s both;
+}
+
+#chip .orb {
+	width: 0.68em;
+	height: 0.68em;
+	border-radius: 50%;
+	background: #fff;
+	flex: none;
+}
+
+#chip .more {
+	max-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	opacity: 0;
+	transition: max-width 0.5s ease, opacity 0.4s ease;
+}
+
+#chip:hover .more, #chip:focus-visible .more, #chip.open .more {
+	max-width: 34ch;
+	opacity: 0.9;
+}
+
+#panel {
+	position: fixed;
+	top: 58px;
+	right: 14px;
+	z-index: 5;
+	width: min(300px, calc(100vw - 28px));
+	padding: 1rem;
+	border-radius: 14px;
+	background: rgba(30, 32, 80, 0.38);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	-webkit-backdrop-filter: blur(14px);
+	backdrop-filter: blur(14px);
+	font-family: var(--mono);
+	font-size: 0.72rem;
+	color: #fff;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+#panel[hidden] { display: none; }
+
+#scrub { width: 100%; accent-color: #fff; cursor: pointer; }
+
+#panel .row { display: flex; gap: 0.5rem; }
+
+#panel .row button {
+	font-family: var(--mono);
+	font-weight: 500;
+	font-size: 0.72rem;
+	color: #fff;
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.24);
+	border-radius: 999px;
+	padding: 0.45em 1em;
+	cursor: pointer;
+	transition: background 0.25s ease;
+}
+
+#panel .row button:hover { background: rgba(255, 255, 255, 0.2); }
+
+#mode-line { opacity: 0.72; }
+
+/* ---------- motion ---------- */
+
+@keyframes rise {
+	from { opacity: 0; transform: translateY(14px); }
+	to { opacity: 1; transform: none; }
+}
+
+@keyframes fade-in { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after {
+		animation: none !important;
+		transition: none !important;
+	}
+}
