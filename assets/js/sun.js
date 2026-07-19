@@ -72,22 +72,26 @@
 		};
 	}
 
-	// Sky and sun colours keyed by solar elevation, blended linearly.
-	// The 25°+ entries are the site's original daytime gradient.
+	// Colours keyed by solar elevation, blended linearly. The sky is drawn
+	// as a radial wash centred on the sun: [near sun, mid, far]. The far
+	// colour at 28°+ is the site's original deep indigo. The sun rows are
+	// [disc, halo]: near-white with a neutral halo when high, amber and
+	// warmer when low.
 	var SKY = [
-		[-18, [24, 26, 58],    [3, 3, 26]],
-		[-6,  [52, 46, 100],   [8, 7, 48]],
-		[0,   [216, 134, 116], [24, 18, 96]],
-		[8,   [225, 172, 152], [15, 13, 110]],
-		[25,  [194, 194, 225], [12, 10, 133]],
-		[90,  [194, 194, 225], [12, 10, 133]]
+		[-18, [26, 28, 62],    [10, 10, 40],   [3, 3, 22]],
+		[-8,  [56, 44, 96],    [22, 18, 62],   [5, 5, 30]],
+		[0,   [255, 172, 124], [124, 74, 128], [16, 11, 72]],
+		[10,  [244, 186, 168], [104, 90, 176], [13, 11, 96]],
+		[28,  [214, 216, 244], [92, 90, 196],  [12, 10, 133]],
+		[90,  [222, 224, 248], [96, 94, 200],  [12, 10, 133]]
 	];
 	var SUN = [
-		[-10, [255, 147, 92]],
-		[0,   [255, 170, 110]],
-		[10,  [255, 214, 160]],
-		[30,  [255, 244, 220]],
-		[90,  [255, 250, 235]]
+		[-10, [255, 138, 80],  [255, 150, 95]],
+		[0,   [255, 158, 92],  [255, 172, 112]],
+		[10,  [255, 200, 150], [255, 210, 170]],
+		[26,  [255, 240, 224], [255, 246, 234]],
+		[40,  [255, 255, 255], [252, 251, 250]],
+		[90,  [255, 255, 255], [251, 251, 253]]
 	];
 
 	function mix(c1, c2, t) {
@@ -115,22 +119,51 @@
 	function render() {
 		var bg = document.getElementById('bg');
 		var sun = document.getElementById('sun');
-		if (!bg || !sun) return;
+		var refl = document.getElementById('sun-reflection');
+		if (!bg || !sun || !refl) return;
 
 		var s = sunState(new Date());
-		var sky = blend(SKY, s.el);
-		bg.style.background = 'linear-gradient(45deg, rgb(' + sky[0] + ') 0%, rgb(' + sky[1] + ') 100%)';
+		var t = clamp(s.el / 45, 0, 1); // 0 = on the horizon, 1 = high sun
 
 		// Horizon (top of the waves) sits at ~72% of the viewport height.
 		var y = s.el >= 0
 			? 72 - 56 * (s.el / s.elNoon)
 			: 72 + 3.5 * -s.el;
-		var c = blend(SUN, s.el)[0];
+		y = clamp(y, 8, 110);
+
+		// Sky: brightest at the sun, falling away to the deep far colour.
+		var sky = blend(SKY, s.el);
+		bg.style.background = 'radial-gradient(130% 130% at ' + s.x + '% ' + y + '%,'
+			+ ' rgb(' + sky[0] + ') 0%, rgb(' + sky[1] + ') 42%, rgb(' + sky[2] + ') 100%)';
+
+		// Disc + halo. Stop percentages are fractions of the 30vmin gradient
+		// radius: the disc shrinks and blows out to white as it climbs, the
+		// halo stretches far beyond it and softens.
+		var c = blend(SUN, s.el);
+		var disc = c[0], halo = c[1];
+		var r = 12 - 4.7 * t;    // disc radius
+		var e = 1.5 + 2.5 * t;   // edge softness
 		sun.style.left = s.x + '%';
-		sun.style.top = clamp(y, 8, 110) + '%';
+		sun.style.top = y + '%';
 		sun.style.opacity = s.el > 0 ? 1 : clamp(1 + s.el / 9, 0, 1);
-		sun.style.background = 'rgb(' + c + ')';
-		sun.style.boxShadow = '0 0 4.5vmin 1.5vmin rgba(' + c + ',0.4), 0 0 18vmin 7vmin rgba(' + c + ',0.18)';
+		sun.style.background = 'radial-gradient(closest-side,'
+			+ ' rgb(' + disc + ') 0%,'
+			+ ' rgb(' + disc + ') ' + r.toFixed(1) + '%,'
+			+ ' rgba(' + halo + ',' + (0.5 + 0.3 * t).toFixed(2) + ') ' + (r + e).toFixed(1) + '%,'
+			+ ' rgba(' + halo + ',0.32) ' + (r * 2.2).toFixed(1) + '%,'
+			+ ' rgba(' + halo + ',0.12) ' + (r * 4.5).toFixed(1) + '%,'
+			+ ' rgba(' + halo + ',0.04) 62%,'
+			+ ' rgba(' + halo + ',0) 100%)';
+
+		// Light landing on the waves: a soft pool at the sun's x, strongest
+		// when the sun is low, gone once it is well below the horizon.
+		var ra = s.el > 0
+			? 0.14 + 0.26 * (1 - t)
+			: 0.4 * clamp(1 + s.el / 9, 0, 1);
+		refl.style.background = 'radial-gradient(56% 120% at ' + s.x + '% 22%,'
+			+ ' rgba(' + halo + ',' + ra.toFixed(2) + ') 0%,'
+			+ ' rgba(' + halo + ',' + (ra * 0.4).toFixed(2) + ') 38%,'
+			+ ' rgba(' + halo + ',0) 68%)';
 	}
 
 	render();
