@@ -139,6 +139,18 @@
 		top: 0;
 	}
 
+/* Sun */
+
+	#sun {
+		position: fixed;
+		width: 9vmin;
+		height: 9vmin;
+		margin: -4.5vmin 0 0 -4.5vmin;
+		border-radius: 100%;
+		opacity: 0;
+		transition: opacity 2s ease, background 2s ease, box-shadow 2s ease, top 2s ease, left 2s ease;
+	}
+
 /* Main */
 
 	#main {
@@ -325,7 +337,8 @@
 		}
 
 		#header nav {
-			font-size: 1em;
+			/* shrink the icon row fluidly so all five fit on one line */
+			font-size: min(1em, 3vw);
 		}
 
 			#header nav a:hover {
