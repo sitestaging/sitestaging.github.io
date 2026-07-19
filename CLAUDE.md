@@ -113,8 +113,9 @@ reports banding, suspect cloud geometry first, not the grain.
   it never collides with the content column.
 - Entrance: canvas fade + staggered rises + name typing + hex scramble on
   pills and fingerprint. Everything is held by `body.ready` (added on load
-  + one rAF) so refreshes replay identical choreography. Pace was slowed
-  1.5× at the owner's request — don't speed it up.
+  + one rAF) so refreshes replay identical choreography. Pacing was slowed
+  twice at the owner's request (now ~4.5s total, typing at 180ms/char) —
+  don't speed it up.
 - Text protection (do not remove): shadow tokens on all type and the fixed
   radial scrim, so the sun can pass directly behind the content at any hour.
 - No copyright footer — removed at the owner's explicit request.
