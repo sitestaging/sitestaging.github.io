@@ -54,7 +54,7 @@ body {
 	inset: 0;
 	width: 100%;
 	height: 100%;
-	animation: fade-in 1.6s ease both;
+	animation: fade-in 2.4s ease both;
 }
 
 .grain {
@@ -83,6 +83,31 @@ main {
 	justify-content: center;
 	text-align: center;
 	padding: 0 1.2rem 9vh;
+	/* hovers fall through to the sky; interactive elements re-enable below */
+	pointer-events: none;
+}
+
+main a, main button {
+	pointer-events: auto;
+}
+
+#sky-tip {
+	position: fixed;
+	z-index: 4;
+	transform: translate(-50%, 0);
+	font-family: var(--mono);
+	font-size: 0.72rem;
+	line-height: 1.9;
+	text-align: center;
+	color: #fff;
+	white-space: nowrap;
+	padding: 0.5em 1.1em;
+	border-radius: 12px;
+	background: rgba(30, 32, 80, 0.4);
+	border: 1px solid rgba(255, 255, 255, 0.24);
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
+	pointer-events: none;
 }
 
 /* the whole entrance holds until the first frame has painted (body.ready,
@@ -100,7 +125,7 @@ h1 {
 	letter-spacing: -0.015em;
 	line-height: 1.02;
 	text-shadow: var(--shadow-display);
-	animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s both;
+	animation: rise 1.35s cubic-bezier(0.2, 0.7, 0.2, 1) 0.25s both;
 }
 
 /* the cursor hangs outside the layout box so the name itself centers truly */
@@ -121,7 +146,7 @@ h1 {
 	height: 1px;
 	margin: 1.5rem auto;
 	background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0));
-	animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.35s both;
+	animation: rise 1.35s cubic-bezier(0.2, 0.7, 0.2, 1) 0.5s both;
 }
 
 @keyframes blink {
@@ -135,7 +160,7 @@ h1 {
 	flex-wrap: wrap;
 	justify-content: center;
 	gap: 0.6rem;
-	animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.45s both;
+	animation: rise 1.35s cubic-bezier(0.2, 0.7, 0.2, 1) 0.7s both;
 }
 
 .pill {
@@ -170,7 +195,7 @@ h1 {
 	letter-spacing: 0.06em;
 	cursor: pointer;
 	text-shadow: var(--shadow-small);
-	animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.6s both;
+	animation: rise 1.35s cubic-bezier(0.2, 0.7, 0.2, 1) 0.9s both;
 }
 
 #fp .g { opacity: 0.95; }
@@ -222,7 +247,7 @@ h1 {
 	-webkit-backdrop-filter: blur(10px);
 	backdrop-filter: blur(10px);
 	cursor: pointer;
-	animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.85s both;
+	animation: rise 1.35s cubic-bezier(0.2, 0.7, 0.2, 1) 1.3s both;
 }
 
 #chip .orb {

@@ -162,6 +162,7 @@ function toScreen(alt, az, W, H) {
 var canvas = document.getElementById('scene');
 var ctx = canvas.getContext('2d');
 var W = 0, H = 0;
+var hoverSun = null, hoverMoon = null, lastSea = null; // for the sky hover card
 
 function resize() {
 	var dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -181,36 +182,42 @@ for (var li = 0; li < 5; li++) {
 		i: li,
 		base: 0.64 + 0.06 * li,
 		tilt: (0.032 - 0.004 * li) * (li % 2 ? -1 : 1),
-		A1: 54 - 8 * li,
+		A1: 60 - 10 * li,
 		f1: 0.5 + 0.11 * li,
-		A2: (54 - 8 * li) * 0.38,
+		A2: (60 - 10 * li) * 0.38,
 		f2: (0.5 + 0.11 * li) * 2.3,
 		ph1: li * 1.7,
 		ph2: li * 2.9 + 1.1,
 		// one shared direction, front layers rolling visibly faster (parallax)
-		sp1: -(0.12 + 0.08 * li),
-		sp2: -(0.30 + 0.18 * li)
+		sp1: -(0.18 + 0.12 * li),
+		sp2: -(0.42 + 0.26 * li)
 	});
 }
 
+// rounder, softer shapes — wide flat ellipses read as banding at night
 var CLOUDS = [
-	{ x0: 0.22, y: 0.20, rx: 0.30, ry: 0.055, sp: 4.0, off: 0 },
-	{ x0: 0.68, y: 0.32, rx: 0.24, ry: 0.045, sp: -2.6, off: 0 }
+	{ x0: 0.22, y: 0.19, rx: 0.20, ry: 0.075, sp: 4.0, off: 0 },
+	{ x0: 0.68, y: 0.31, rx: 0.16, ry: 0.06, sp: -2.6, off: 0 }
 ];
 
 // Sea state follows the sun and the moon the way real water does:
 // glassy at dawn, waking through the morning, choppiest with the
-// afternoon breeze, settling at dusk — and at night the swell rises
-// with the moon, spring-tide style: a full moon rolls far more water
-// than a sliver.
+// afternoon breeze, settling at dusk. The lunar term is a real tide
+// abstraction — spring tides at syzygy (new AND full moon), neap tides
+// at the quarters — and the drift direction reverses between day and
+// night the way coastal sea/land breezes do: west by day, east by
+// night, slack water at twilight.
 function seaState(sun, moon) {
 	var daylight = clamp((sun.alt + 6) / 26, 0, 1);
 	var afternoon = clamp(sun.H / 55, 0, 1) * daylight;
-	var tide = (0.1 + 0.9 * moon.frac) * (1 - 0.6 * daylight);
+	var tide = 0.15 + 0.85 * Math.abs(2 * moon.frac - 1);
+	var lunar = tide * (1 - 0.6 * daylight);
 	return {
-		energy: 0.74 + 0.28 * daylight + 0.22 * afternoon + 0.30 * tide, // swell height
-		chop: 0.40 + 0.70 * daylight + 0.55 * afternoon,                 // secondary ripple
-		tempo: 0.85 + 0.40 * daylight + 0.35 * afternoon + 0.35 * tide   // speed of it all
+		energy: 0.72 + 0.34 * daylight + 0.26 * afternoon + 0.30 * lunar, // swell height
+		chop: 0.38 + 0.78 * daylight + 0.60 * afternoon,                  // secondary ripple
+		tempo: 0.90 + 0.50 * daylight + 0.40 * afternoon + 0.40 * lunar,  // speed of it all
+		tide: tide,
+		flow: daylight * 2 - 1
 	};
 }
 
@@ -233,8 +240,8 @@ function draw(dt, sun, pal, moon) {
 
 	// advance the scene's clocks (dt = 0 renders a static frame)
 	for (var pi = 0; pi < LAYERS.length; pi++) {
-		LAYERS[pi].ph1 += LAYERS[pi].sp1 * sea.tempo * dt;
-		LAYERS[pi].ph2 += LAYERS[pi].sp2 * sea.tempo * dt;
+		LAYERS[pi].ph1 += LAYERS[pi].sp1 * sea.tempo * sea.flow * dt;
+		LAYERS[pi].ph2 += LAYERS[pi].sp2 * sea.tempo * sea.flow * dt;
 	}
 	for (var co = 0; co < CLOUDS.length; co++) CLOUDS[co].off += CLOUDS[co].sp * dt;
 
@@ -322,9 +329,9 @@ function draw(dt, sun, pal, moon) {
 		var moonlight = moon.vis * (0.25 + 0.75 * moon.frac); // full moon lights more water
 		sources.push({
 			x: mp.x,
-			amb: 0.10 * moonlight,
-			spec: pal.poolA * 1.5 * moonlight,
-			sigma: W * 0.10
+			amb: 0.18 * moonlight,
+			spec: pal.poolA * 5 * moonlight, // the cool pool under the moon
+			sigma: W * 0.12
 		});
 	}
 
@@ -364,6 +371,11 @@ function draw(dt, sun, pal, moon) {
 		ctx.fillStyle = g;
 		ctx.fill(path);
 	}
+
+	// remembered for the sky hover card
+	hoverSun = { x: p.x, y: p.y };
+	hoverMoon = mp;
+	lastSea = sea;
 }
 
 /* ---------- state + UI ---------- */
@@ -489,6 +501,61 @@ fpBtn.addEventListener('click', function () {
 	}
 });
 
+/* ---------- sky hover card: sun and moon report on themselves ---------- */
+
+var skyTip = document.getElementById('sky-tip');
+var COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+               'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+
+function driftWord(flow) {
+	return flow > 0.05 ? 'drifting west' : flow < -0.05 ? 'drifting east' : 'slack water';
+}
+
+function moonPhaseName(frac, waxing) {
+	if (frac < 0.04) return 'new moon';
+	if (frac < 0.45) return waxing ? 'waxing crescent' : 'waning crescent';
+	if (frac < 0.55) return waxing ? 'first quarter' : 'last quarter';
+	if (frac < 0.96) return waxing ? 'waxing gibbous' : 'waning gibbous';
+	return 'full moon';
+}
+
+window.addEventListener('pointermove', function (e) {
+	if (!skyTip || !lastSea) return;
+	function near(pt, rr) {
+		if (!pt) return false;
+		var dx = e.clientX - pt.x, dy = e.clientY - pt.y;
+		return dx * dx + dy * dy < rr * rr;
+	}
+	var html = null, tx = 0, ty = 0;
+	if (cachedMoon && near(hoverMoon, 55)) {
+		html = moonPhaseName(cachedMoon.frac, cachedMoon.waxing)
+			+ ' &middot; ' + Math.round(cachedMoon.frac * 100) + '% lit &middot; '
+			+ (cachedMoon.w > 0.5
+				? Math.round(cachedMoon.real.alt) + '&deg; up &middot; ' + COMPASS[Math.round(cachedMoon.real.az / 22.5) % 16]
+				: 'set below the horizon')
+			+ '<br>tide &times;' + lastSea.tide.toFixed(2) + ' on the swell &middot; ' + driftWord(lastSea.flow);
+		tx = hoverMoon.x; ty = hoverMoon.y + 34;
+	} else if (cachedSun && cachedSun.alt > -6 && near(hoverSun, 85)) {
+		html = 'sun &middot; ' + Math.round(Math.abs(cachedSun.alt)) + '&deg; '
+			+ (cachedSun.alt >= 0 ? 'up' : 'below the horizon')
+			+ ' &middot; ' + COMPASS[Math.round(cachedSun.az / 22.5) % 16]
+			+ '<br>swell &times;' + lastSea.energy.toFixed(2)
+			+ ' &middot; chop &times;' + lastSea.chop.toFixed(2)
+			+ ' &middot; ' + driftWord(lastSea.flow);
+		tx = hoverSun.x; ty = hoverSun.y + 64;
+	}
+	if (html) {
+		skyTip.innerHTML = html;
+		skyTip.hidden = false;
+		skyTip.style.left = clamp(tx, 160, W - 160) + 'px';
+		skyTip.style.top = clamp(ty, 12, H - 80) + 'px';
+		document.documentElement.style.cursor = 'help';
+	} else {
+		skyTip.hidden = true;
+		document.documentElement.style.cursor = '';
+	}
+});
+
 /* ---------- entrance: typing + hex scramble ---------- */
 
 function typeEl(el, delay, speed) {
@@ -542,14 +609,14 @@ refreshSun();
 function startEntrance() {
 	document.body.classList.add('ready');
 	if (reduced) return;
-	typeEl(document.getElementById('name'), 550, 85);
+	typeEl(document.getElementById('name'), 800, 130);
 	var pills = document.querySelectorAll('.pill');
 	for (var pi = 0; pi < pills.length; pi++) {
-		scrambleEl(pills[pi], 350 + pi * 80, 950, 'abcdef0123456789');
+		scrambleEl(pills[pi], 500 + pi * 120, 1400, 'abcdef0123456789');
 	}
 	var groups = document.querySelectorAll('#fp .g');
 	for (var gi = 0; gi < groups.length; gi++) {
-		scrambleEl(groups[gi], 500 + gi * 100, 1100, 'ABCDEF0123456789');
+		scrambleEl(groups[gi], 750 + gi * 150, 1650, 'ABCDEF0123456789');
 	}
 }
 
