@@ -265,21 +265,25 @@ function draw(dt, sun, pal, moon) {
 	// sun (west when waxing, east when waning), drawn only when it is
 	// actually above the horizon on a dark sky
 	var mp = null;
-	if (moon.vis > 0.01) {
-		var ma = toScreen(moon.arc.alt, moon.arc.az, W, H);
-		var mr = toScreen(moon.real.alt, moon.real.az, W, H);
-		mp = { x: ma.x + (mr.x - ma.x) * moon.w, y: ma.y + (mr.y - ma.y) * moon.w };
+	// crossfade between the fallback arc and the real position instead of
+	// sliding between them: the arc moon dims away as the real moon rises,
+	// which reads far better in motion than a swinging position lerp
+	var mFade = moon.vis * smooth(Math.abs(moon.w * 2 - 1));
+	if (mFade > 0.01) {
+		mp = moon.w >= 0.5
+			? toScreen(moon.real.alt, moon.real.az, W, H)
+			: toScreen(moon.arc.alt, moon.arc.az, W, H);
 		var r = 19;
 		// the halo must agree with the phase: a sliver barely glows,
 		// a full moon earns its light (small floor so new moons exist)
 		ctx.fillStyle = radial(mp.x, mp.y, 84, [
-			[0, css(pal.halo, (0.03 + 0.13 * moon.frac) * moon.vis)], [1, css(pal.halo, 0)]
+			[0, css(pal.halo, (0.03 + 0.13 * moon.frac) * mFade)], [1, css(pal.halo, 0)]
 		]);
 		ctx.fillRect(mp.x - 84, mp.y - 84, 168, 168);
 		// earthshine: the whole sphere, barely there, sells the crescent
 		ctx.beginPath();
 		ctx.arc(mp.x, mp.y, r, 0, TAU);
-		ctx.fillStyle = css(WHITE, 0.045 * moon.vis);
+		ctx.fillStyle = css(WHITE, 0.045 * mFade);
 		ctx.fill();
 		// lit side: half limb closed by an elliptical terminator, so the
 		// horns taper to points; lit limb faces the sun's side of the sky
@@ -288,7 +292,7 @@ function draw(dt, sun, pal, moon) {
 		var lit = new Path2D();
 		lit.ellipse(mp.x, mp.y, r, r, rot, -Math.PI / 2, Math.PI / 2, false);
 		lit.ellipse(mp.x, mp.y, Math.abs(k) * r, r, rot, Math.PI / 2, Math.PI * 1.5, k < 0);
-		ctx.fillStyle = css(mix(pal.halo, WHITE, 0.85), 0.95 * moon.vis);
+		ctx.fillStyle = css(mix(pal.halo, WHITE, 0.85), 0.95 * mFade);
 		ctx.fill(lit);
 	}
 
@@ -342,7 +346,7 @@ function draw(dt, sun, pal, moon) {
 		sigma: W * (0.09 + 0.28 * t01)
 	});
 	if (mp) {
-		var moonlight = moon.vis * (0.25 + 0.75 * moon.frac); // full moon lights more water
+		var moonlight = mFade * (0.25 + 0.75 * moon.frac); // full moon lights more water
 		sources.push({
 			x: mp.x,
 			amb: 0.18 * moonlight,
