@@ -94,14 +94,43 @@ function computeSun() {
 	return mode.precise ? preciseSun(d, mode.lat, mode.lon) : approxSun(d);
 }
 
-// Moon: an abstract counterweight, opposite the sun's azimuth on deep nights.
-// Its altitude is kept high enough to clear the content block, since near
-// midnight "opposite the sun" lands at the horizontal centre of the screen.
-function moonFrom(sun) {
+// Moon: the real one. Low-precision lunar ephemeris (the SunCalc
+// formulation) gives ecliptic coordinates; the moon's hour angle is the
+// sun's offset by their right-ascension difference, which keeps it
+// consistent with whichever mode (clock-approximate or precise) produced
+// the sun. Phase comes from the sun-moon separation angle.
+var OBL = 23.4397 * RAD;
+
+function raDec(l, b) {
 	return {
-		az: (sun.az + 180) % 360,
-		alt: clamp(24 - sun.alt * 1.25, 24, 52),
-		vis: clamp((-5 - sun.alt) / 6, 0, 1)
+		ra: Math.atan2(Math.sin(l) * Math.cos(OBL) - Math.tan(b) * Math.sin(OBL), Math.cos(l)),
+		dec: Math.asin(Math.sin(b) * Math.cos(OBL) + Math.cos(b) * Math.sin(OBL) * Math.sin(l))
+	};
+}
+
+function moonState(date, sun) {
+	var d = date.getTime() / 864e5 - 10957.5; // days since J2000
+	// sun ecliptic longitude
+	var Ms = (357.5291 + 0.98560028 * d) * RAD;
+	var Cs = (1.9148 * Math.sin(Ms) + 0.02 * Math.sin(2 * Ms) + 0.0003 * Math.sin(3 * Ms)) * RAD;
+	var ls = Ms + Cs + (102.9372 + 180) * RAD;
+	// moon ecliptic coordinates
+	var L = (218.316 + 13.176396 * d) * RAD;
+	var Mm = (134.963 + 13.064993 * d) * RAD;
+	var F = (93.272 + 13.229350 * d) * RAD;
+	var lm = L + 6.289 * RAD * Math.sin(Mm);
+	var bm = 5.128 * RAD * Math.sin(F);
+	var s = raDec(ls, 0), m = raDec(lm, bm);
+	var pos = altAz(mode.precise ? mode.lat : 40, m.dec / RAD, sun.H + (s.ra - m.ra) / RAD);
+	var phi = Math.acos(clamp(
+		Math.sin(s.dec) * Math.sin(m.dec) + Math.cos(s.dec) * Math.cos(m.dec) * Math.cos(s.ra - m.ra), -1, 1));
+	return {
+		alt: pos.alt,
+		az: pos.az,
+		frac: (1 - Math.cos(phi)) / 2,               // illuminated fraction
+		waxing: Math.sin(lm - ls) > 0,               // lit limb west (right) when waxing
+		vis: clamp((-5 - sun.alt) / 6, 0, 1)         // only once the sun is well down
+		   * clamp(pos.alt / 8, 0, 1)                // and only if it is really up
 	};
 }
 
@@ -192,7 +221,7 @@ function radial(x, y, r, stops) {
 	return g;
 }
 
-function draw(dt, sun, pal) {
+function draw(dt, sun, pal, moon) {
 	var p = toScreen(sun.alt, sun.az, W, H);
 	var sea = seaState(sun);
 
@@ -210,28 +239,30 @@ function draw(dt, sun, pal) {
 	]);
 	ctx.fillRect(0, 0, W, H);
 
-	// 2. moon — deep nights only: a crisp pale disc with a shaded limb
-	// falling away from the sun's side of the sky, inside a soft halo
-	var moon = moonFrom(sun);
+	// 2. moon — the real one: true phase for the date, lit limb toward the
+	// sun (west when waxing, east when waning), drawn only when it is
+	// actually above the horizon on a dark sky
 	var mp = null;
-	if (moon.vis > 0) {
+	if (moon.vis > 0.01) {
 		mp = toScreen(moon.alt, moon.az, W, H);
+		var r = 15;
 		ctx.fillStyle = radial(mp.x, mp.y, 80, [
-			[0, css(pal.halo, 0.13 * moon.vis)], [1, css(pal.halo, 0)]
+			[0, css(pal.halo, (0.06 + 0.09 * moon.frac) * moon.vis)], [1, css(pal.halo, 0)]
 		]);
 		ctx.fillRect(mp.x - 80, mp.y - 80, 160, 160);
-		var disc = new Path2D();
-		disc.arc(mp.x, mp.y, 15, 0, TAU);
+		// dark side, barely there
+		ctx.beginPath();
+		ctx.arc(mp.x, mp.y, r, 0, TAU);
+		ctx.fillStyle = css(mix(pal.skyM, pal.halo, 0.35), 0.3 * moon.vis);
+		ctx.fill();
+		// lit side: half limb closed by an elliptical terminator
+		var k = 2 * moon.frac - 1;
+		var rot = moon.waxing ? 0 : Math.PI;
+		var lit = new Path2D();
+		lit.ellipse(mp.x, mp.y, r, r, rot, -Math.PI / 2, Math.PI / 2, false);
+		lit.ellipse(mp.x, mp.y, Math.abs(k) * r, r, rot, Math.PI / 2, Math.PI * 1.5, k < 0);
 		ctx.fillStyle = css(mix(pal.halo, WHITE, 0.85), 0.95 * moon.vis);
-		ctx.fill(disc);
-		ctx.save();
-		ctx.clip(disc);
-		var away = p.x > mp.x ? -1 : 1;
-		var shade = new Path2D();
-		shade.arc(mp.x + away * 7, mp.y - 4, 14, 0, TAU);
-		ctx.fillStyle = css(mix(pal.skyM, pal.halo, 0.4), 0.55 * moon.vis);
-		ctx.fill(shade);
-		ctx.restore();
+		ctx.fill(lit);
 	}
 
 	// 3. sun halo — carries the brightness; doubles as the twilight horizon glow
@@ -279,12 +310,15 @@ function draw(dt, sun, pal) {
 		spec: pal.poolA * 2.2 * sunUp,
 		sigma: W * (0.09 + 0.28 * t01)
 	});
-	if (mp) sources.push({
-		x: mp.x,
-		amb: 0.10 * moon.vis,
-		spec: pal.poolA * 1.5 * moon.vis,
-		sigma: W * 0.10
-	});
+	if (mp) {
+		var moonlight = moon.vis * (0.25 + 0.75 * moon.frac); // full moon lights more water
+		sources.push({
+			x: mp.x,
+			amb: 0.10 * moonlight,
+			spec: pal.poolA * 1.5 * moonlight,
+			sigma: W * 0.10
+		});
+	}
 
 	var N = 48;
 	for (var i = 0; i < LAYERS.length; i++) {
@@ -339,11 +373,12 @@ var liveBtn = document.getElementById('live-btn');
 var geoBtn = document.getElementById('geo-btn');
 var modeLine = document.getElementById('mode-line');
 
-var cachedSun = null, cachedPal = null, cachedMinute = -1;
+var cachedSun = null, cachedPal = null, cachedMoon = null, cachedMinute = -1;
 
 function refreshSun() {
 	cachedSun = computeSun();
 	cachedPal = paletteAt(cachedSun.alt);
+	cachedMoon = moonState(simDate(), cachedSun);
 	updateChip();
 }
 
@@ -405,7 +440,8 @@ function syncScrub() {
 window.__sim = {
 	set: function (m) { sim = clamp(Math.round(m), 0, 1439); scrub.value = sim; refreshSun(); if (reduced) drawOnce(); },
 	live: function () { sim = null; syncScrub(); refreshSun(); if (reduced) drawOnce(); },
-	place: function (lat, lon) { mode.precise = true; mode.lat = lat; mode.lon = lon; refreshSun(); if (reduced) drawOnce(); }
+	place: function (lat, lon) { mode.precise = true; mode.lat = lat; mode.lon = lon; refreshSun(); if (reduced) drawOnce(); },
+	state: function () { return { sun: cachedSun, moon: cachedMoon }; }
 };
 
 /* ---------- fingerprint copy ---------- */
@@ -495,14 +531,13 @@ refreshSun();
 
 if (!reduced) {
 	typeEl(document.getElementById('name'), 550, 85);
-	scrambleEl(document.getElementById('roles'), 350, 1700, 'abcdef0123456789');
 	var groups = document.querySelectorAll('#fp .g');
 	for (var gi = 0; gi < groups.length; gi++) {
 		scrambleEl(groups[gi], 500 + gi * 100, 1100, 'ABCDEF0123456789');
 	}
 }
 
-function drawOnce() { draw(0, cachedSun, cachedPal); }
+function drawOnce() { draw(0, cachedSun, cachedPal, cachedMoon); }
 
 if (reduced) {
 	drawOnce();
@@ -517,7 +552,7 @@ if (reduced) {
 			var m = new Date().getMinutes();
 			if (m !== cachedMinute) { cachedMinute = m; refreshSun(); }
 		}
-		draw(dt, cachedSun, cachedPal);
+		draw(dt, cachedSun, cachedPal, cachedMoon);
 		requestAnimationFrame(frame);
 	});
 }

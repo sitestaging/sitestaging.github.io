@@ -106,16 +106,6 @@ h1 {
 	100% { opacity: 1; }
 }
 
-.roles {
-	margin-top: 1rem;
-	font-weight: 400;
-	font-size: clamp(0.95rem, 2.3vw, 1.15rem);
-	letter-spacing: 0.01em;
-	opacity: 0.92;
-	text-shadow: var(--shadow-small);
-	animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s both;
-}
-
 .links {
 	margin-top: 1.7rem;
 	display: flex;
