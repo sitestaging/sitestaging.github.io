@@ -180,7 +180,7 @@ for (var li = 0; li < 5; li++) {
 	LAYERS.push({
 		i: li,
 		base: 0.64 + 0.06 * li,
-		tilt: (0.055 - 0.006 * li) * (li % 2 ? -1 : 1),
+		tilt: (0.032 - 0.004 * li) * (li % 2 ? -1 : 1),
 		A1: 54 - 8 * li,
 		f1: 0.5 + 0.11 * li,
 		A2: (54 - 8 * li) * 0.38,
@@ -537,12 +537,26 @@ syncScrub();
 if (sim != null) scrub.value = sim;
 refreshSun();
 
-if (!reduced) {
+// The entrance waits for the load event plus one painted frame, so a
+// refresh replays the same choreography as a first visit.
+function startEntrance() {
+	document.body.classList.add('ready');
+	if (reduced) return;
 	typeEl(document.getElementById('name'), 550, 85);
+	var pills = document.querySelectorAll('.pill');
+	for (var pi = 0; pi < pills.length; pi++) {
+		scrambleEl(pills[pi], 350 + pi * 80, 950, 'abcdef0123456789');
+	}
 	var groups = document.querySelectorAll('#fp .g');
 	for (var gi = 0; gi < groups.length; gi++) {
 		scrambleEl(groups[gi], 500 + gi * 100, 1100, 'ABCDEF0123456789');
 	}
+}
+
+if (document.readyState === 'complete') {
+	requestAnimationFrame(startEntrance);
+} else {
+	window.addEventListener('load', function () { requestAnimationFrame(startEntrance); });
 }
 
 function drawOnce() { draw(0, cachedSun, cachedPal, cachedMoon); }

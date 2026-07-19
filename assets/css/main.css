@@ -82,7 +82,16 @@ main {
 	align-items: center;
 	justify-content: center;
 	text-align: center;
-	padding: 0 1.2rem;
+	padding: 0 1.2rem 9vh;
+}
+
+/* the whole entrance holds until the first frame has painted (body.ready,
+   set on load) so refreshes get the same choreography as first visits */
+body:not(.ready) #scene,
+body:not(.ready) #chip,
+body:not(.ready) main,
+body:not(.ready) main * {
+	animation-play-state: paused !important;
 }
 
 h1 {
@@ -171,14 +180,26 @@ h1 {
 	position: absolute;
 	top: 100%;
 	left: 50%;
-	transform: translate(-50%, 0.7em);
-	font-size: 0.9em;
+	transform: translate(-50%, 0.9em);
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45em;
+	padding: 0.4em 1em;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.14);
+	border: 1px solid rgba(255, 255, 255, 0.3);
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
+	font-size: 0.95em;
+	white-space: nowrap;
 	opacity: 0;
 	transition: opacity 0.35s ease;
 	pointer-events: none;
 }
 
-#fp-note.show { opacity: 0.85; }
+#fp-note svg { width: 1em; height: 1em; }
+
+#fp-note.show { opacity: 1; }
 
 /* ---------- status chip + panel ---------- */
 
