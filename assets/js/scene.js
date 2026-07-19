@@ -196,8 +196,8 @@ for (var li = 0; li < 5; li++) {
 		ph1: li * 1.7,
 		ph2: li * 2.9 + 1.1,
 		// one shared direction, front layers rolling visibly faster (parallax)
-		sp1: -(0.18 + 0.12 * li),
-		sp2: -(0.42 + 0.26 * li)
+		sp1: -(0.13 + 0.09 * li),
+		sp2: -(0.30 + 0.19 * li)
 	});
 }
 
