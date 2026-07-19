@@ -169,12 +169,14 @@ function toScreen(alt, az, W, H) {
 var canvas = document.getElementById('scene');
 var ctx = canvas.getContext('2d');
 var W = 0, H = 0;
+var AMP = 1; // wave amplitudes are tuned in px for a 1600px viewport; scale down on phones
 var hoverSun = null, hoverMoon = null, lastSea = null; // for the sky hover card
 
 function resize() {
 	var dpr = Math.min(window.devicePixelRatio || 1, 2);
 	W = window.innerWidth;
 	H = window.innerHeight;
+	AMP = clamp(W / 1600, 0.32, 1);
 	canvas.width = Math.round(W * dpr);
 	canvas.height = Math.round(H * dpr);
 	ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -189,9 +191,10 @@ for (var li = 0; li < 5; li++) {
 		i: li,
 		base: 0.64 + 0.06 * li,
 		tilt: (0.032 - 0.004 * li) * (li % 2 ? -1 : 1),
-		A1: 60 - 10 * li,
+		// perspective: the far swell stays small, the near water rolls big
+		A1: 24 + 9 * li,
 		f1: 0.5 + 0.11 * li,
-		A2: (60 - 10 * li) * 0.38,
+		A2: (24 + 9 * li) * 0.38,
 		f2: (0.5 + 0.11 * li) * 2.3,
 		ph1: li * 1.7,
 		ph2: li * 2.9 + 1.1,
@@ -233,8 +236,8 @@ function seaState(sun, moon) {
 function surfaceY(L, x, sea) {
 	return L.base * H
 		+ L.tilt * (x - W / 2)
-		+ L.A1 * sea.energy * Math.sin(TAU * L.f1 * x / W + L.ph1)
-		+ L.A2 * sea.chop * Math.sin(TAU * L.f2 * x / W + L.ph2);
+		+ L.A1 * AMP * sea.energy * Math.sin(TAU * L.f1 * x / W + L.ph1)
+		+ L.A2 * AMP * sea.chop * Math.sin(TAU * L.f2 * x / W + L.ph2);
 }
 
 function radial(x, y, r, stops) {
@@ -273,6 +276,9 @@ function draw(dt, sun, pal, moon) {
 		mp = moon.w >= 0.5
 			? toScreen(moon.real.alt, moon.real.az, W, H)
 			: toScreen(moon.arc.alt, moon.arc.az, W, H);
+		// portrait screens: the content column fills the middle of the sky
+		// band, so lift the moon above it rather than let it collide
+		if (H > W) mp.y = Math.min(mp.y, 0.24 * H);
 		var r = 19;
 		// the halo must agree with the phase: a sliver barely glows,
 		// a full moon earns its light (small floor so new moons exist)
@@ -539,8 +545,13 @@ function moonPhaseName(frac, waxing) {
 	return 'full moon';
 }
 
+// hover-capable, fine-pointer devices only: on touch screens the card
+// would pop up on taps and just add noise
+var canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
 window.addEventListener('pointermove', function (e) {
-	if (!skyTip || !lastSea) return;
+	if (!canHover || !skyTip || !lastSea) return;
+	if (e.pointerType && e.pointerType !== 'mouse') return;
 	function near(pt, rr) {
 		if (!pt) return false;
 		var dx = e.clientX - pt.x, dy = e.clientY - pt.y;
@@ -629,14 +640,14 @@ refreshSun();
 function startEntrance() {
 	document.body.classList.add('ready');
 	if (reduced) return;
-	typeEl(document.getElementById('name'), 800, 130);
+	typeEl(document.getElementById('name'), 1100, 180);
 	var pills = document.querySelectorAll('.pill');
 	for (var pi = 0; pi < pills.length; pi++) {
-		scrambleEl(pills[pi], 500 + pi * 120, 1400, 'abcdef0123456789');
+		scrambleEl(pills[pi], 800 + pi * 170, 2000, 'abcdef0123456789');
 	}
 	var groups = document.querySelectorAll('#fp .g');
 	for (var gi = 0; gi < groups.length; gi++) {
-		scrambleEl(groups[gi], 750 + gi * 150, 1650, 'ABCDEF0123456789');
+		scrambleEl(groups[gi], 1100 + gi * 220, 2300, 'ABCDEF0123456789');
 	}
 }
 

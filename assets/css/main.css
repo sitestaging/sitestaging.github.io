@@ -54,7 +54,7 @@ body {
 	inset: 0;
 	width: 100%;
 	height: 100%;
-	animation: fade-in 2.4s ease both;
+	animation: fade-in 3.5s ease both;
 }
 
 .grain {
@@ -125,7 +125,7 @@ h1 {
 	letter-spacing: -0.015em;
 	line-height: 1.02;
 	text-shadow: var(--shadow-display);
-	animation: rise 1.35s cubic-bezier(0.2, 0.7, 0.2, 1) 0.25s both;
+	animation: rise 2s cubic-bezier(0.2, 0.7, 0.2, 1) 0.4s both;
 }
 
 /* the cursor hangs outside the layout box so the name itself centers truly */
@@ -146,7 +146,7 @@ h1 {
 	height: 1px;
 	margin: 1.5rem auto;
 	background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0));
-	animation: rise 1.35s cubic-bezier(0.2, 0.7, 0.2, 1) 0.5s both;
+	animation: rise 2s cubic-bezier(0.2, 0.7, 0.2, 1) 0.8s both;
 }
 
 @keyframes blink {
@@ -160,7 +160,7 @@ h1 {
 	flex-wrap: wrap;
 	justify-content: center;
 	gap: 0.6rem;
-	animation: rise 1.35s cubic-bezier(0.2, 0.7, 0.2, 1) 0.7s both;
+	animation: rise 2s cubic-bezier(0.2, 0.7, 0.2, 1) 1.1s both;
 }
 
 .pill {
@@ -195,7 +195,7 @@ h1 {
 	letter-spacing: 0.06em;
 	cursor: pointer;
 	text-shadow: var(--shadow-small);
-	animation: rise 1.35s cubic-bezier(0.2, 0.7, 0.2, 1) 0.9s both;
+	animation: rise 2s cubic-bezier(0.2, 0.7, 0.2, 1) 1.4s both;
 }
 
 #fp .fp-label {
@@ -257,7 +257,7 @@ h1 {
 	-webkit-backdrop-filter: blur(10px);
 	backdrop-filter: blur(10px);
 	cursor: pointer;
-	animation: rise 1.35s cubic-bezier(0.2, 0.7, 0.2, 1) 1.3s both;
+	animation: rise 2s cubic-bezier(0.2, 0.7, 0.2, 1) 1.9s both;
 }
 
 #chip .orb {
@@ -276,9 +276,18 @@ h1 {
 	transition: max-width 0.5s ease, opacity 0.4s ease;
 }
 
-#chip:hover .more, #chip:focus-visible .more, #chip.open .more {
+#chip:focus-visible .more, #chip.open .more {
 	max-width: 34ch;
 	opacity: 0.9;
+}
+
+/* hover expansion only where hover is a real thing — on touch screens the
+   sticky :hover state would leave the time permanently expanded */
+@media (hover: hover) {
+	#chip:hover .more {
+		max-width: 34ch;
+		opacity: 0.9;
+	}
 }
 
 #panel {

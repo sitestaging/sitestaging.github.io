@@ -61,7 +61,11 @@ brighten them without the owner's approval.
 
 Five layers, back (i=0) to front (i=4): baseY 0.64+0.06i of viewport height,
 alternating gentle tilt (±(0.032−0.004i)) for the crisscross composition,
-broad wavelengths only (≤1 crest on screen per sweep). Surfaces are lit
+broad wavelengths only (≤1 crest on screen per sweep). Amplitudes grow
+front-ward (24+9i px) — perspective: the far swell stays small, the near
+water rolls big; the owner rejected a large back swell as "way too big".
+Amplitudes are tuned for a 1600px viewport and scaled by
+`AMP = clamp(W/1600, 0.32, 1)` so phones don't get distorted churn. Surfaces are lit
 per-sample from slope vs. light direction: crests facing the light take its
 color, away-slopes shade toward skyF, and a specular column stands on the
 water below each source (tight/golden at low sun, wide/faint at high sun,
@@ -101,7 +105,12 @@ reports banding, suspect cloud geometry first, not the grain.
 - Hovering the sun or moon shows a card: identity/phase/position plus the
   live sea impact (swell/chop multipliers, tide factor, drift direction).
   `main` has `pointer-events: none` with links/buttons re-enabled so hovers
-  reach the sky — keep that wiring.
+  reach the sky — keep that wiring. The card is desktop-only: gated on
+  `(hover: hover) and (pointer: fine)` plus pointerType — never show it on
+  touch. The chip's hover-expansion is likewise wrapped in
+  `@media (hover: hover)` so sticky mobile :hover can't pin it open.
+- Portrait screens (`H > W`): the moon's display y is clamped to ≤0.24H so
+  it never collides with the content column.
 - Entrance: canvas fade + staggered rises + name typing + hex scramble on
   pills and fingerprint. Everything is held by `body.ready` (added on load
   + one rAF) so refreshes replay identical choreography. Pace was slowed
