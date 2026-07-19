@@ -164,6 +164,44 @@
 		transition: opacity 2s ease, background 2s ease, top 70s linear, left 70s linear;
 	}
 
+		/* hover target over the disc itself, not the whole halo */
+		#sun .core {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			width: 12vmin;
+			height: 12vmin;
+			margin: -6vmin 0 0 -6vmin;
+			border-radius: 100%;
+			pointer-events: auto;
+			cursor: help;
+		}
+
+		#sun .tip {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			transform: translate(-50%, 8vmin);
+			white-space: nowrap;
+			text-align: center;
+			font-size: 0.72em;
+			line-height: 1.7em;
+			color: #fff;
+			text-shadow: none;
+			background: rgba(12, 11, 48, 0.42);
+			padding: 0.6em 1.4em;
+			border-radius: 1.6em;
+			-webkit-backdrop-filter: blur(8px);
+			backdrop-filter: blur(8px);
+			opacity: 0;
+			transition: opacity 0.3s ease;
+			pointer-events: none;
+		}
+
+		#sun .core:hover ~ .tip {
+			opacity: 1;
+		}
+
 	#sun-reflection {
 		position: fixed;
 		bottom: 0;
@@ -189,7 +227,13 @@
 		text-align: center;
 		top: 0;
 		width: 100%;
+		/* let hovers fall through to the sun; links re-enable below */
+		pointer-events: none;
 	}
+
+		#main a {
+			pointer-events: auto;
+		}
 
 		#main:before {
 			content: '';

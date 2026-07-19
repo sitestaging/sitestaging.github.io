@@ -65,8 +65,16 @@
 		// Hour angle at sunrise/sunset, and the day's peak elevation.
 		var H0 = Math.acos(clamp(-Math.tan(lat * RAD) * Math.tan(decl * RAD), -1, 1)) / RAD;
 
+		// Azimuth: measured from south positive westward, shifted to compass
+		// bearing (0 = north, 90 = east).
+		var az = Math.atan2(
+			Math.sin(H * RAD),
+			Math.cos(H * RAD) * Math.sin(lat * RAD) - Math.tan(decl * RAD) * Math.cos(lat * RAD)
+		) / RAD;
+
 		return {
 			el: el,
+			az: (az + 540) % 360,
 			x: 50 + 44 * clamp(((H % 360 + 540) % 360 - 180) / Math.max(H0, 1), -1, 1),
 			elNoon: Math.max(90 - Math.abs(lat - decl), 1)
 		};
@@ -116,13 +124,17 @@
 		return stops[stops.length - 1].slice(1);
 	}
 
+	var COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+	               'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+
 	function render() {
 		var bg = document.getElementById('bg');
 		var sun = document.getElementById('sun');
 		var refl = document.getElementById('sun-reflection');
 		if (!bg || !sun || !refl) return;
 
-		var s = sunState(new Date());
+		var now = new Date();
+		var s = sunState(now);
 		var t = clamp(s.el / 45, 0, 1); // 0 = on the horizon, 1 = high sun
 
 		// Horizon (top of the waves) sits at ~72% of the viewport height.
@@ -168,8 +180,20 @@
 			+ ' rgba(' + halo + ',' + ra.toFixed(2) + ') 0%,'
 			+ ' rgba(' + halo + ',' + (ra * 0.4).toFixed(2) + ') 38%,'
 			+ ' rgba(' + halo + ',0) 68%)';
+
+		// Hover card: where the sun sits in the visitor's sky right now.
+		var tip = sun.querySelector('.tip');
+		if (tip) {
+			tip.innerHTML = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+				+ ' &middot; ' + now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+				+ '<br>sun ' + Math.round(Math.abs(s.el)) + '&deg; '
+				+ (s.el >= 0 ? 'above' : 'below') + ' the horizon &middot; '
+				+ COMPASS[Math.round(s.az / 22.5) % 16];
+		}
 	}
 
 	render();
 	setInterval(render, 60000);
+	var core = document.querySelector('#sun .core');
+	if (core) core.addEventListener('mouseenter', render); // refresh the card's clock on hover
 })();
