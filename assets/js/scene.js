@@ -124,15 +124,22 @@ function moonState(date, sun) {
 	var pos = altAz(mode.precise ? mode.lat : 40, m.dec / RAD, sun.H + (s.ra - m.ra) / RAD);
 	var phi = Math.acos(clamp(
 		Math.sin(s.dec) * Math.sin(m.dec) + Math.cos(s.dec) * Math.cos(m.dec) * Math.cos(s.ra - m.ra), -1, 1));
+	var frac = (1 - Math.cos(phi)) / 2;
+	var waxing = Math.sin(lm - ls) > 0;
+	// Fallback arc for when the real moon is below the horizon: it must stay
+	// phase-honest. Crescents hug the horizon on the sun's side of the sky
+	// (west after dusk, east before dawn); only fuller moons ride high.
+	var anti = (sun.az + 180) % 360;
 	return {
-		frac: (1 - Math.cos(phi)) / 2,               // illuminated fraction
-		waxing: Math.sin(lm - ls) > 0,               // lit limb west (right) when waxing
+		frac: frac,
+		waxing: waxing,
 		vis: clamp((-5 - sun.alt) / 6, 0, 1),        // shown once the sun is well down
-		// real position, blended toward a counterweight arc when the real
-		// moon is below the horizon so a dark sky is never empty
 		w: clamp((pos.alt - 2) / 10, 0, 1),
 		real: { alt: pos.alt, az: pos.az },
-		arc: { alt: clamp(24 - sun.alt * 1.25, 24, 52), az: (sun.az + 180) % 360 }
+		arc: {
+			alt: clamp(6 + 44 * frac, 6, 50),
+			az: waxing ? 276 + (anti - 276) * frac : 84 + (anti - 84) * frac
+		}
 	};
 }
 
@@ -194,10 +201,12 @@ for (var li = 0; li < 5; li++) {
 	});
 }
 
-// rounder, softer shapes — wide flat ellipses read as banding at night
+// Two thin cirrus bands, very high in the sky. They catch the palette's
+// warm colour at sunrise and sunset and all but vanish at midday and in
+// deep night — no more puffy smudges banding the upper sky.
 var CLOUDS = [
-	{ x0: 0.22, y: 0.19, rx: 0.20, ry: 0.075, sp: 4.0, off: 0 },
-	{ x0: 0.68, y: 0.31, rx: 0.16, ry: 0.06, sp: -2.6, off: 0 }
+	{ x0: 0.25, y: 0.09, rx: 0.30, ry: 0.009, sp: 3.2, off: 0 },
+	{ x0: 0.62, y: 0.15, rx: 0.22, ry: 0.007, sp: -2.2, off: 0 }
 ];
 
 // Sea state follows the sun and the moon the way real water does:
@@ -260,17 +269,20 @@ function draw(dt, sun, pal, moon) {
 		var ma = toScreen(moon.arc.alt, moon.arc.az, W, H);
 		var mr = toScreen(moon.real.alt, moon.real.az, W, H);
 		mp = { x: ma.x + (mr.x - ma.x) * moon.w, y: ma.y + (mr.y - ma.y) * moon.w };
-		var r = 15;
-		ctx.fillStyle = radial(mp.x, mp.y, 80, [
-			[0, css(pal.halo, (0.06 + 0.09 * moon.frac) * moon.vis)], [1, css(pal.halo, 0)]
+		var r = 19;
+		// the halo must agree with the phase: a sliver barely glows,
+		// a full moon earns its light (small floor so new moons exist)
+		ctx.fillStyle = radial(mp.x, mp.y, 84, [
+			[0, css(pal.halo, (0.03 + 0.13 * moon.frac) * moon.vis)], [1, css(pal.halo, 0)]
 		]);
-		ctx.fillRect(mp.x - 80, mp.y - 80, 160, 160);
-		// dark side, barely there
+		ctx.fillRect(mp.x - 84, mp.y - 84, 168, 168);
+		// earthshine: the whole sphere, barely there, sells the crescent
 		ctx.beginPath();
 		ctx.arc(mp.x, mp.y, r, 0, TAU);
-		ctx.fillStyle = css(mix(pal.skyM, pal.halo, 0.35), 0.3 * moon.vis);
+		ctx.fillStyle = css(WHITE, 0.045 * moon.vis);
 		ctx.fill();
-		// lit side: half limb closed by an elliptical terminator
+		// lit side: half limb closed by an elliptical terminator, so the
+		// horns taper to points; lit limb faces the sun's side of the sky
 		var k = 2 * moon.frac - 1;
 		var rot = moon.waxing ? 0 : Math.PI;
 		var lit = new Path2D();
@@ -298,7 +310,11 @@ function draw(dt, sun, pal, moon) {
 		ctx.fillRect(p.x - cr, p.y - cr, cr * 2, cr * 2);
 	}
 
-	// 5. clouds — two deliberately vague drifting shapes
+	// 5. cirrus — thin bands that blush at the golden hours and fade away
+	// toward midday and deep night
+	var golden = clamp(1 - Math.abs(sun.alt - 2) / 18, 0, 1);
+	var cirrusA = pal.cloudA * (0.25 + 1.75 * golden);
+	var cirrusC = mix(WHITE, pal.halo, golden * 0.8);
 	for (var ci = 0; ci < CLOUDS.length; ci++) {
 		var cl = CLOUDS[ci];
 		var rx = cl.rx * W, ry = cl.ry * H;
@@ -306,7 +322,7 @@ function draw(dt, sun, pal, moon) {
 		ctx.save();
 		ctx.translate(cx, cl.y * H);
 		ctx.scale(rx, ry);
-		ctx.fillStyle = radial(0, 0, 1, [[0, css(WHITE, pal.cloudA)], [1, css(WHITE, 0)]]);
+		ctx.fillStyle = radial(0, 0, 1, [[0, css(cirrusC, cirrusA)], [1, css(cirrusC, 0)]]);
 		ctx.fillRect(-1, -1, 2, 2);
 		ctx.restore();
 	}
