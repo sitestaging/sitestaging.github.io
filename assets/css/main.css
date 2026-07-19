@@ -159,7 +159,9 @@
 		margin: -30vmin 0 0 -30vmin;
 		pointer-events: none;
 		animation: sun-in 3.5s 1.2s ease backwards;
-		transition: opacity 2s ease, background 2s ease, top 2s ease, left 2s ease;
+		/* position transitions span the 60s re-render interval so the sun
+		   crawls continuously across the sky while the page is open */
+		transition: opacity 2s ease, background 2s ease, top 70s linear, left 70s linear;
 	}
 
 	#sun-reflection {
@@ -172,6 +174,7 @@
 		opacity: 0;
 		animation: wrapper 3.5s 1.2s forwards;
 		transition: background 2s ease;
+		mix-blend-mode: screen;
 		/* fade the strip out before its top edge so the glow never shows a seam */
 		-webkit-mask-image: linear-gradient(to bottom, transparent 0%, #fff 22%);
 		mask-image: linear-gradient(to bottom, transparent 0%, #fff 22%);
@@ -241,12 +244,15 @@
 			font-weight: 900;
 			letter-spacing: -0.035em;
 			line-height: 1em;
+			/* keeps the type legible whenever the sun's halo drifts behind it */
+			text-shadow: 0 2px 24px rgba(55, 58, 140, 0.55);
 		}
 
 		#header p {
 			font-size: 1.25em;
 			margin: 0.75em 0 0.25em 0;
 			opacity: 0.75;
+			text-shadow: 0 1px 4px rgba(55, 58, 140, 0.5), 0 2px 14px rgba(55, 58, 140, 0.55);
 		}
 
 		#header .pgp {
@@ -303,6 +309,7 @@
 					fill: currentColor;
 					border: solid 1px #fff;
 					border-radius: 100%;
+					filter: drop-shadow(0 2px 12px rgba(55, 58, 140, 0.5));
 				}
 
 				#header nav a:hover {

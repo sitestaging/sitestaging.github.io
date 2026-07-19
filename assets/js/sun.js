@@ -131,10 +131,12 @@
 			: 72 + 3.5 * -s.el;
 		y = clamp(y, 8, 110);
 
-		// Sky: brightest at the sun, falling away to the deep far colour.
+		// Sky: brightest at the sun, falling away to the deep far colour. The
+		// falloff is kept tight enough that every gradient in the scene traces
+		// back to the same point.
 		var sky = blend(SKY, s.el);
-		bg.style.background = 'radial-gradient(130% 130% at ' + s.x + '% ' + y + '%,'
-			+ ' rgb(' + sky[0] + ') 0%, rgb(' + sky[1] + ') 42%, rgb(' + sky[2] + ') 100%)';
+		bg.style.background = 'radial-gradient(115% 115% at ' + s.x + '% ' + y + '%,'
+			+ ' rgb(' + sky[0] + ') 0%, rgb(' + sky[1] + ') 36%, rgb(' + sky[2] + ') 95%)';
 
 		// Disc + halo. Stop percentages are fractions of the 30vmin gradient
 		// radius: the disc shrinks and blows out to white as it climbs, the
@@ -155,12 +157,14 @@
 			+ ' rgba(' + halo + ',0.04) 62%,'
 			+ ' rgba(' + halo + ',0) 100%)';
 
-		// Light landing on the waves: a soft pool at the sun's x, strongest
-		// when the sun is low, gone once it is well below the horizon.
+		// Light landing on the waves (screen-blended): a high sun spreads a
+		// wide, faint sheen; a low sun narrows it into a warmer, stronger
+		// pool; gone once the sun is well below the horizon.
 		var ra = s.el > 0
-			? 0.14 + 0.26 * (1 - t)
-			: 0.4 * clamp(1 + s.el / 9, 0, 1);
-		refl.style.background = 'radial-gradient(56% 120% at ' + s.x + '% 22%,'
+			? 0.08 + 0.3 * (1 - t)
+			: 0.38 * clamp(1 + s.el / 9, 0, 1);
+		var rw = 40 + 45 * t;
+		refl.style.background = 'radial-gradient(' + rw.toFixed(0) + '% 120% at ' + s.x + '% 22%,'
 			+ ' rgba(' + halo + ',' + ra.toFixed(2) + ') 0%,'
 			+ ' rgba(' + halo + ',' + (ra * 0.4).toFixed(2) + ') 38%,'
 			+ ' rgba(' + halo + ',0) 68%)';
