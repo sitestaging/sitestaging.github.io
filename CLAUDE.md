@@ -109,8 +109,12 @@ reports banding, suspect cloud geometry first, not the grain.
   `(hover: hover) and (pointer: fine)` plus pointerType — never show it on
   touch. The chip's hover-expansion is likewise wrapped in
   `@media (hover: hover)` so sticky mobile :hover can't pin it open.
-- Portrait screens (`H > W`): the moon's display y is clamped to ≤0.24H so
-  it never collides with the content column.
+- The moon is kept clear of the content on every viewport: when its x falls
+  within the centered content band it is lifted above the measured top of
+  the name (`contentTop`), and on very short screens with no sky left
+  (landscape phones) it tucks into the free upper-left corner instead.
+- Cirrus band heights are calibrated: too thin renders as hairline streaks
+  on large screens, too fat bands the night sky (current ry 0.030/0.024).
 - Entrance: canvas fade + staggered rises + name typing + hex scramble on
   pills and fingerprint. Everything is held by `body.ready` (added on load
   + one rAF) so refreshes replay identical choreography. Pacing was slowed

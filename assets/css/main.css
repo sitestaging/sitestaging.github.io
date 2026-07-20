@@ -141,6 +141,12 @@ h1 {
 	animation: blink 1.15s steps(1, end) infinite;
 }
 
+/* tiny screens wrap the name to two lines; there the absolute cursor would
+   detach to the box edge, so let it flow after the last character instead */
+@media (max-width: 380px) {
+	.cursor { position: static; margin-left: 0.08em; }
+}
+
 .sep {
 	width: 120px;
 	height: 1px;
@@ -180,6 +186,12 @@ h1 {
 
 .pill:hover { background: rgba(255, 255, 255, 0.19); transform: translateY(-1px); }
 
+/* narrow screens: cap the row width so five pills wrap as a balanced 3/2
+   instead of stranding one pill alone on the second row */
+@media (max-width: 520px) {
+	.links { max-width: 340px; }
+}
+
 #fp {
 	position: relative;
 	display: flex;
@@ -208,8 +220,13 @@ h1 {
 	margin-bottom: 0.4em;
 }
 
+/* the ten groups live in two halves of five, so a narrow screen wraps the
+   line as a balanced 5/5 instead of orphaning the last group */
+.fp-half { display: flex; gap: 0.5em; }
+
 #fp .g { opacity: 0.95; }
-#fp .g:nth-child(odd) { opacity: 0.55; }
+#fp .fp-half:nth-of-type(1) .g:nth-child(even) { opacity: 0.55; }
+#fp .fp-half:nth-of-type(2) .g:nth-child(odd) { opacity: 0.55; }
 
 #fp-note {
 	position: absolute;

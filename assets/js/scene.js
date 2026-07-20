@@ -170,7 +170,13 @@ var canvas = document.getElementById('scene');
 var ctx = canvas.getContext('2d');
 var W = 0, H = 0;
 var AMP = 1; // wave amplitudes are tuned in px for a 1600px viewport; scale down on phones
+var contentTop = 1e9; // top of the name, so the moon can stay clear of the content
 var hoverSun = null, hoverMoon = null, lastSea = null; // for the sky hover card
+
+function measureContent() {
+	var el = document.querySelector('main h1');
+	if (el) contentTop = el.getBoundingClientRect().top;
+}
 
 function resize() {
 	var dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -180,6 +186,7 @@ function resize() {
 	canvas.width = Math.round(W * dpr);
 	canvas.height = Math.round(H * dpr);
 	ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+	measureContent();
 }
 
 // Five wave layers; i = 0 is the back layer. Broad wavelengths only:
@@ -204,12 +211,13 @@ for (var li = 0; li < 5; li++) {
 	});
 }
 
-// Two thin cirrus bands, very high in the sky. They catch the palette's
-// warm colour at sunrise and sunset and all but vanish at midday and in
-// deep night — no more puffy smudges banding the upper sky.
+// Two soft cirrus bands, high in the sky. They catch the palette's warm
+// colour at sunrise and sunset and all but vanish at midday and in deep
+// night. Height matters: too thin and they render as hairline streaks on
+// large screens, too fat and they band the night sky.
 var CLOUDS = [
-	{ x0: 0.25, y: 0.09, rx: 0.30, ry: 0.009, sp: 3.2, off: 0 },
-	{ x0: 0.62, y: 0.15, rx: 0.22, ry: 0.007, sp: -2.2, off: 0 }
+	{ x0: 0.25, y: 0.10, rx: 0.26, ry: 0.030, sp: 3.2, off: 0 },
+	{ x0: 0.62, y: 0.16, rx: 0.20, ry: 0.024, sp: -2.2, off: 0 }
 ];
 
 // Sea state follows the sun and the moon the way real water does:
@@ -276,9 +284,18 @@ function draw(dt, sun, pal, moon) {
 		mp = moon.w >= 0.5
 			? toScreen(moon.real.alt, moon.real.az, W, H)
 			: toScreen(moon.arc.alt, moon.arc.az, W, H);
-		// portrait screens: the content column fills the middle of the sky
-		// band, so lift the moon above it rather than let it collide
-		if (H > W) mp.y = Math.min(mp.y, 0.24 * H);
+		// keep the moon clear of the content column on any viewport: when it
+		// would sit over the centered name/pills/fingerprint band, lift it
+		// above the measured content top — and on very short screens with no
+		// sky left (landscape phones), tuck it into the free upper-left corner
+		if (Math.abs(mp.x - W / 2) < Math.min(W * 0.45, 360) + 40) {
+			var clearY = Math.min(0.24 * H, contentTop - 52);
+			if (clearY < 30) {
+				mp = { x: Math.max(56, W * 0.07), y: Math.max(36, H * 0.12) };
+			} else {
+				mp.y = Math.min(mp.y, clearY);
+			}
+		}
 		var r = 19;
 		// the halo must agree with the phase: a sliver barely glows,
 		// a full moon earns its light (small floor so new moons exist)
@@ -323,7 +340,7 @@ function draw(dt, sun, pal, moon) {
 	// 5. cirrus — thin bands that blush at the golden hours and fade away
 	// toward midday and deep night
 	var golden = clamp(1 - Math.abs(sun.alt - 2) / 18, 0, 1);
-	var cirrusA = pal.cloudA * (0.25 + 1.75 * golden);
+	var cirrusA = pal.cloudA * (0.25 + 1.5 * golden);
 	var cirrusC = mix(WHITE, pal.halo, golden * 0.8);
 	for (var ci = 0; ci < CLOUDS.length; ci++) {
 		var cl = CLOUDS[ci];
@@ -332,7 +349,9 @@ function draw(dt, sun, pal, moon) {
 		ctx.save();
 		ctx.translate(cx, cl.y * H);
 		ctx.scale(rx, ry);
-		ctx.fillStyle = radial(0, 0, 1, [[0, css(cirrusC, cirrusA)], [1, css(cirrusC, 0)]]);
+		ctx.fillStyle = radial(0, 0, 1, [
+			[0, css(cirrusC, cirrusA)], [0.55, css(cirrusC, cirrusA * 0.5)], [1, css(cirrusC, 0)]
+		]);
 		ctx.fillRect(-1, -1, 2, 2);
 		ctx.restore();
 	}
@@ -425,6 +444,7 @@ function refreshSun() {
 	cachedSun = computeSun();
 	cachedPal = paletteAt(cachedSun.alt);
 	cachedMoon = moonState(simDate(), cachedSun);
+	measureContent();
 	updateChip();
 }
 
