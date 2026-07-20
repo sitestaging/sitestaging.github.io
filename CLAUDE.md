@@ -88,10 +88,12 @@ fast" — current sp values are the agreed middle; change only on request.
 
 Two very thin bands high in the sky that blush with the palette's warm
 color at sunrise/sunset (`golden` factor peaks near alt≈2°) and stay
-faintly visible at midday and night (baseline 0.65× of the palette's
-cloudA — raised from 0.25× because the owner found the clouds invisible
-outside the golden hours; the golden-hour peak is unchanged at 1.75×).
-A band is thinned near the sun's disc so it can't smear across the glow. They replaced puffy ellipses whose wide flat
+plainly visible at every hour (baseline 2.4× of the palette's cloudA,
+golden adds +0.2×). The baseline was raised twice — 0.25× then 0.65×
+both read as invisible to the owner; don't quietly lower it again.
+A band is thinned near the sun's disc so it can't smear across the glow
+(tight radius, 0.12 of viewport, so the band dodges the disc rather than
+vanishing from a whole quadrant). They replaced puffy ellipses whose wide flat
 shapes read as smudgy banding on the night sky. The film grain overlay
 (SVG turbulence data URI on `.grain`) is verified working; if someone
 reports banding, suspect cloud geometry first, not the grain.
@@ -114,10 +116,13 @@ reports banding, suspect cloud geometry first, not the grain.
   `(hover: hover) and (pointer: fine)` plus pointerType — never show it on
   touch. The chip's hover-expansion is likewise wrapped in
   `@media (hover: hover)` so sticky mobile :hover can't pin it open.
-- The moon is kept clear of the content on every viewport: when its x falls
-  within the centered content band it is lifted above the measured top of
-  the name (`contentTop`), and on very short screens with no sky left
-  (landscape phones) it tucks into the free upper-left corner instead.
+- The moon is kept clear of the content on every viewport via two gates:
+  inside the centered content band it is always lifted above the measured
+  top of the name (`contentTop`); a second, wider gate (scales with W)
+  also lifts mid-sky moons that would park at pill height beside the
+  content on wide/ultrawide screens, but exempts low moons (y ≥ 0.54H) so
+  horizon-hugging crescents stay phase-honest. On very short screens with
+  no sky left (landscape phones) it tucks into the free upper-left corner.
 - Cirrus band heights are calibrated: too thin renders as hairline streaks
   on large screens, too fat bands the night sky (current ry 0.030/0.024).
 - Entrance: canvas fade + staggered rises + name typing + hex scramble on

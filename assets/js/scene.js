@@ -292,8 +292,15 @@ function draw(dt, sun, pal, moon) {
 		// keep the moon clear of the content column on any viewport: when it
 		// would sit over the centered name/pills/fingerprint band, lift it
 		// above the measured content top — and on very short screens with no
-		// sky left (landscape phones), tuck it into the free upper-left corner
-		if (Math.abs(mp.x - W / 2) < Math.min(W * 0.45, 360) + 40) {
+		// sky left (landscape phones), tuck it into the free upper-left corner.
+		// Two gates: the content band itself (readability — always clamps),
+		// and a wider one that scales with viewport for mid-sky moons, which
+		// otherwise park at pill height beside the content on wide screens.
+		// The wide gate exempts low moons (y ≥ 0.54H) so the phase-honest
+		// horizon-hugging crescents keep hugging the horizon.
+		var mOff = Math.abs(mp.x - W / 2);
+		if (mOff < Math.min(W * 0.45, 360) + 84 ||
+		    (mOff < W * 0.30 + 84 && mp.y < H * 0.54)) {
 			var clearY = Math.min(0.24 * H, contentTop - 52);
 			if (clearY < 30) {
 				mp = { x: Math.max(56, W * 0.07), y: Math.max(36, H * 0.12) };
@@ -346,19 +353,20 @@ function draw(dt, sun, pal, moon) {
 		ctx.fillRect(p.x - cr, p.y - cr, cr * 2, cr * 2);
 	}
 
-	// 5. cirrus — thin bands, always faintly present, that blush brightest
-	// at the golden hours
+	// 5. cirrus — thin bands, plainly visible at every hour, warmest and a
+	// touch brighter at the golden hours (owner asked twice for more
+	// presence: 0.25x baseline read as invisible, then 0.65x still did)
 	var golden = clamp(1 - Math.abs(sun.alt - 2) / 18, 0, 1);
-	var cirrusA = pal.cloudA * (0.65 + 1.1 * golden);
+	var cirrusA = pal.cloudA * (2.4 + 0.2 * golden);
 	var cirrusC = mix(WHITE, pal.halo, golden * 0.8);
 	for (var ci = 0; ci < CLOUDS.length; ci++) {
 		var cl = CLOUDS[ci];
 		var rx = cl.rx * W, ry = cl.ry * H;
 		var cx = ((cl.x0 * W + cl.off) % (W + rx * 2) + (W + rx * 2)) % (W + rx * 2) - rx;
 		// a band crossing the sun's glow reads as a smear, not a cloud —
-		// thin it out near the disc; the golden blush is global, so bands
-		// elsewhere keep their colour
-		var ddx = (cx - p.x) / (W * 0.16), ddy = (cl.y * H - p.y) / (H * 0.16);
+		// thin it out near the disc (radius kept tight so a band merely
+		// dodges the disc instead of vanishing from a whole sky quadrant)
+		var ddx = (cx - p.x) / (W * 0.12), ddy = (cl.y * H - p.y) / (H * 0.12);
 		var aBand = cirrusA * (1 - 0.65 * Math.exp(-(ddx * ddx + ddy * ddy)));
 		ctx.save();
 		ctx.translate(cx, cl.y * H);
