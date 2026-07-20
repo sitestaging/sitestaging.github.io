@@ -212,9 +212,9 @@ for (var li = 0; li < 5; li++) {
 }
 
 // Two soft cirrus bands, high in the sky. They catch the palette's warm
-// colour at sunrise and sunset and all but vanish at midday and in deep
-// night. Height matters: too thin and they render as hairline streaks on
-// large screens, too fat and they band the night sky.
+// colour at sunrise and sunset and stay faintly present through midday
+// and night. Height matters: too thin and they render as hairline streaks
+// on large screens, too fat and they band the night sky.
 var CLOUDS = [
 	{ x0: 0.25, y: 0.10, rx: 0.26, ry: 0.030, sp: 3.2, off: 0 },
 	{ x0: 0.62, y: 0.16, rx: 0.20, ry: 0.024, sp: -2.2, off: 0 }
@@ -337,10 +337,10 @@ function draw(dt, sun, pal, moon) {
 		ctx.fillRect(p.x - cr, p.y - cr, cr * 2, cr * 2);
 	}
 
-	// 5. cirrus — thin bands that blush at the golden hours and fade away
-	// toward midday and deep night
+	// 5. cirrus — thin bands, always faintly present, that blush brightest
+	// at the golden hours
 	var golden = clamp(1 - Math.abs(sun.alt - 2) / 18, 0, 1);
-	var cirrusA = pal.cloudA * (0.25 + 1.5 * golden);
+	var cirrusA = pal.cloudA * (0.65 + 1.1 * golden);
 	var cirrusC = mix(WHITE, pal.halo, golden * 0.8);
 	for (var ci = 0; ci < CLOUDS.length; ci++) {
 		var cl = CLOUDS[ci];

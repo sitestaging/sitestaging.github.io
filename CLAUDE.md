@@ -85,8 +85,10 @@ fast" — current sp values are the agreed middle; change only on request.
 ### Cirrus
 
 Two very thin bands high in the sky that blush with the palette's warm
-color at sunrise/sunset (`golden` factor peaks near alt≈2°) and all but
-vanish at midday and night. They replaced puffy ellipses whose wide flat
+color at sunrise/sunset (`golden` factor peaks near alt≈2°) and stay
+faintly visible at midday and night (baseline 0.65× of the palette's
+cloudA — raised from 0.25× because the owner found the clouds invisible
+outside the golden hours; the golden-hour peak is unchanged at 1.75×). They replaced puffy ellipses whose wide flat
 shapes read as smudgy banding on the night sky. The film grain overlay
 (SVG turbulence data URI on `.grain`) is verified working; if someone
 reports banding, suspect cloud geometry first, not the grain.
