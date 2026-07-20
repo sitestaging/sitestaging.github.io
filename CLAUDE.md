@@ -69,9 +69,11 @@ Amplitudes are tuned for a 1600px viewport and scaled by
 per-sample from slope vs. light direction: crests facing the light take its
 color, away-slopes shade toward skyF, and a specular column stands on the
 water below each source (tight/golden at low sun, wide/faint at high sun,
-cool/narrow under the moon — scaled by phase). There is no separate "pool"
-overlay; light lives in the wave fill so it can never disagree with the
-shapes.
+cool/narrow under the moon — scaled by phase). The light direction eases
+through zero beneath each source (a hard sign flip there used to draw a
+vertical seam down the water) and every slope glitters directly under it,
+so the column center stays solid. There is no separate "pool" overlay;
+light lives in the wave fill so it can never disagree with the shapes.
 
 **Sea state** (`seaState`) is a real-ocean abstraction the owner cares
 about: glassy at dawn, chop building through the afternoon breeze, settling
@@ -88,7 +90,8 @@ Two very thin bands high in the sky that blush with the palette's warm
 color at sunrise/sunset (`golden` factor peaks near alt≈2°) and stay
 faintly visible at midday and night (baseline 0.65× of the palette's
 cloudA — raised from 0.25× because the owner found the clouds invisible
-outside the golden hours; the golden-hour peak is unchanged at 1.75×). They replaced puffy ellipses whose wide flat
+outside the golden hours; the golden-hour peak is unchanged at 1.75×).
+A band is thinned near the sun's disc so it can't smear across the glow. They replaced puffy ellipses whose wide flat
 shapes read as smudgy banding on the night sky. The film grain overlay
 (SVG turbulence data URI on `.grain`) is verified working; if someone
 reports banding, suspect cloud geometry first, not the grain.

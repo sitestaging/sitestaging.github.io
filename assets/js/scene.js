@@ -155,12 +155,17 @@ function phaseName(s) {
 
 /* ---------- screen mapping ----------
    Azimuth 60..300 maps to 6%..94% of width (east left, west right);
-   altitude 0..66 maps from the horizon line (60% height) up to 8%. */
+   altitude 0..66 maps from the horizon line (60% height) toward 8%.
+   Above ~53° a soft knee compresses the climb so a high summer sun
+   (alt > 66 was previously unclamped) eases toward the 8% line instead
+   of clipping the top of the canvas. */
 
 function toScreen(alt, az, W, H) {
+	var n = alt / 66;
+	if (n > 0.8) n = 0.8 + 0.2 * Math.tanh((n - 0.8) / 0.2);
 	return {
 		x: W * (0.06 + 0.88 * clamp((az - 60) / 240, 0, 1)),
-		y: 0.60 * H - (0.60 - 0.08) * H * (alt / 66)
+		y: 0.60 * H - (0.60 - 0.08) * H * n
 	};
 }
 
@@ -306,7 +311,7 @@ function draw(dt, sun, pal, moon) {
 		// earthshine: the whole sphere, barely there, sells the crescent
 		ctx.beginPath();
 		ctx.arc(mp.x, mp.y, r, 0, TAU);
-		ctx.fillStyle = css(WHITE, 0.045 * mFade);
+		ctx.fillStyle = css(WHITE, 0.09 * mFade);
 		ctx.fill();
 		// lit side: half limb closed by an elliptical terminator, so the
 		// horns taper to points; lit limb faces the sun's side of the sky
@@ -326,12 +331,16 @@ function draw(dt, sun, pal, moon) {
 	]);
 	ctx.fillRect(0, 0, W, H);
 
-	// 4. sun core — intentionally modest
+	// 4. sun core — intentionally modest; the profile holds a short plateau
+	// then falls off harder, so the disc keeps a findable edge at mid
+	// altitudes without raising peak brightness (crosses the old profile's
+	// value at r=0.32, dimmer skirt beyond)
 	if (pal.coreA > 0.002) {
 		var cr = 72 * clamp(W / 1100, 0.62, 1);
 		ctx.fillStyle = radial(p.x, p.y, cr, [
 			[0, css(WHITE, pal.coreA)],
-			[0.32, css(mix(pal.halo, WHITE, 0.55), pal.coreA * 0.5)],
+			[0.22, css(WHITE, pal.coreA * 0.72)],
+			[0.42, css(mix(pal.halo, WHITE, 0.55), pal.coreA * 0.28)],
 			[1, css(pal.halo, 0)]
 		]);
 		ctx.fillRect(p.x - cr, p.y - cr, cr * 2, cr * 2);
@@ -346,11 +355,16 @@ function draw(dt, sun, pal, moon) {
 		var cl = CLOUDS[ci];
 		var rx = cl.rx * W, ry = cl.ry * H;
 		var cx = ((cl.x0 * W + cl.off) % (W + rx * 2) + (W + rx * 2)) % (W + rx * 2) - rx;
+		// a band crossing the sun's glow reads as a smear, not a cloud —
+		// thin it out near the disc; the golden blush is global, so bands
+		// elsewhere keep their colour
+		var ddx = (cx - p.x) / (W * 0.16), ddy = (cl.y * H - p.y) / (H * 0.16);
+		var aBand = cirrusA * (1 - 0.65 * Math.exp(-(ddx * ddx + ddy * ddy)));
 		ctx.save();
 		ctx.translate(cx, cl.y * H);
 		ctx.scale(rx, ry);
 		ctx.fillStyle = radial(0, 0, 1, [
-			[0, css(cirrusC, cirrusA)], [0.55, css(cirrusC, cirrusA * 0.5)], [1, css(cirrusC, 0)]
+			[0, css(cirrusC, aBand)], [0.55, css(cirrusC, aBand * 0.5)], [1, css(cirrusC, 0)]
 		]);
 		ctx.fillRect(-1, -1, 2, 2);
 		ctx.restore();
@@ -398,10 +412,15 @@ function draw(dt, sun, pal, moon) {
 			var lit = 0;
 			for (var si = 0; si < sources.length; si++) {
 				var S = sources[si];
-				var facing = clamp(slope * (S.x >= xs[k] ? 7 : -7), -1, 1);
+				// the light direction eases through zero beneath the source —
+				// a hard sign flip there drew a vertical seam down the water —
+				// and directly under it every slope glitters, so the column
+				// center stays solid instead of dimming
+				var dir = clamp((S.x - xs[k]) / (W * 0.05), -1, 1);
+				var facing = clamp(slope * 7 * dir, -1, 1);
 				var dxn = (xs[k] - S.x) / S.sigma;
-				lit += S.amb * facing
-				     + S.spec * Math.exp(-dxn * dxn) * (0.35 + 0.65 * Math.max(0, facing));
+				var glit = Math.max(0.35 + 0.65 * Math.max(0, facing), 1 - Math.abs(dir));
+				lit += S.amb * facing + S.spec * Math.exp(-dxn * dxn) * glit;
 			}
 			lit = clamp(lit * depth, -0.35, 0.95);
 			var c = lit >= 0 ? mix(base, lightCol, lit) : mix(base, pal.skyF, -lit * 0.6);
