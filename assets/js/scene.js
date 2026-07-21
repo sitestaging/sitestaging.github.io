@@ -221,8 +221,9 @@ for (var li = 0; li < 5; li++) {
 // and night. Height matters: too thin and they render as hairline streaks
 // on large screens, too fat and they band the night sky.
 var CLOUDS = [
-	{ x0: 0.25, y: 0.10, rx: 0.26, ry: 0.030, sp: 3.2, off: 0 },
-	{ x0: 0.62, y: 0.16, rx: 0.20, ry: 0.024, sp: -2.2, off: 0 }
+	{ x0: 0.18, y: 0.09, rx: 0.30, ry: 0.036, sp: 4.5, off: 0, ph: 0.0 },
+	{ x0: 0.58, y: 0.21, rx: 0.24, ry: 0.030, sp: -3.4, off: 0, ph: 2.1 },
+	{ x0: 0.86, y: 0.14, rx: 0.17, ry: 0.024, sp: 2.6, off: 0, ph: 4.2 }
 ];
 
 // Sea state follows the sun and the moon the way real water does:
@@ -363,16 +364,20 @@ function draw(dt, sun, pal, moon) {
 		var cl = CLOUDS[ci];
 		var rx = cl.rx * W, ry = cl.ry * H;
 		var cx = ((cl.x0 * W + cl.off) % (W + rx * 2) + (W + rx * 2)) % (W + rx * 2) - rx;
+		// beyond the slow drift, each band bobs and breathes on its own
+		// long phase — barely perceptible, just enough to feel alive
+		var cy = (cl.y + 0.008 * Math.sin(cl.off * 0.02 + cl.ph)) * H;
 		// a band crossing the sun's glow reads as a smear, not a cloud —
 		// thin it out near the disc (radius kept tight so a band merely
 		// dodges the disc instead of vanishing from a whole sky quadrant)
-		var ddx = (cx - p.x) / (W * 0.12), ddy = (cl.y * H - p.y) / (H * 0.12);
-		var aBand = cirrusA * (1 - 0.65 * Math.exp(-(ddx * ddx + ddy * ddy)));
+		var ddx = (cx - p.x) / (W * 0.12), ddy = (cy - p.y) / (H * 0.12);
+		var aBand = cirrusA * (1 - 0.65 * Math.exp(-(ddx * ddx + ddy * ddy)))
+		          * (0.92 + 0.08 * Math.sin(cl.off * 0.013 + cl.ph));
 		ctx.save();
-		ctx.translate(cx, cl.y * H);
+		ctx.translate(cx, cy);
 		ctx.scale(rx, ry);
 		ctx.fillStyle = radial(0, 0, 1, [
-			[0, css(cirrusC, aBand)], [0.55, css(cirrusC, aBand * 0.5)], [1, css(cirrusC, 0)]
+			[0, css(cirrusC, aBand)], [0.62, css(cirrusC, aBand * 0.6)], [1, css(cirrusC, 0)]
 		]);
 		ctx.fillRect(-1, -1, 2, 2);
 		ctx.restore();

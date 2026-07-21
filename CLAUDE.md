@@ -86,14 +86,19 @@ fast" — current sp values are the agreed middle; change only on request.
 
 ### Cirrus
 
-Two very thin bands high in the sky that blush with the palette's warm
-color at sunrise/sunset (`golden` factor peaks near alt≈2°) and stay
-plainly visible at every hour (baseline 2.4× of the palette's cloudA,
-golden adds +0.2×). The baseline was raised twice — 0.25× then 0.65×
-both read as invisible to the owner; don't quietly lower it again.
-A band is thinned near the sun's disc so it can't smear across the glow
-(tight radius, 0.12 of viewport, so the band dodges the disc rather than
-vanishing from a whole quadrant). They replaced puffy ellipses whose wide flat
+Three thin bands spread across distinct sky heights (y 0.09/0.21/0.14)
+that blush with the palette's warm color at sunrise/sunset (`golden`
+factor peaks near alt≈2°) and stay plainly visible at every hour
+(baseline 2.4× of the palette's cloudA, golden adds +0.2×; gradient body
+holds 0.6× to r=0.62 so the band has substance, not just a bright core).
+The baseline was raised twice — 0.25× then 0.65× both read as invisible
+to the owner — and a third band was added for the same reason; don't
+quietly dial any of it back. Bands drift slowly and each bobs (±0.008H)
+and breathes (±8% alpha) on its own long phase — barely perceptible,
+per the owner's ask for "very slight animation". A band is thinned near
+the sun's disc so it can't smear across the glow (tight radius, 0.12 of
+viewport, so the band dodges the disc rather than vanishing from a whole
+quadrant). They replaced puffy ellipses whose wide flat
 shapes read as smudgy banding on the night sky. The film grain overlay
 (SVG turbulence data URI on `.grain`) is verified working; if someone
 reports banding, suspect cloud geometry first, not the grain.
@@ -124,7 +129,8 @@ reports banding, suspect cloud geometry first, not the grain.
   horizon-hugging crescents stay phase-honest. On very short screens with
   no sky left (landscape phones) it tucks into the free upper-left corner.
 - Cirrus band heights are calibrated: too thin renders as hairline streaks
-  on large screens, too fat bands the night sky (current ry 0.030/0.024).
+  on large screens, too fat bands the night sky (current ry
+  0.036/0.030/0.024 across the three bands).
 - Entrance: canvas fade + staggered rises + name typing + hex scramble on
   pills and fingerprint. Everything is held by `body.ready` (added on load
   + one rAF) so refreshes replay identical choreography. Pacing was slowed
