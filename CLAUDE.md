@@ -48,6 +48,12 @@ brighten them without the owner's approval.
    **phase-honest fallback arc** — crescents hug the horizon on the sun's
    side (west after dusk, east before dawn), only fuller moons ride high.
    A crescent high at midnight is astronomically impossible; keep it that way.
+   While the real moon crosses alt 2°–12° the arc stand-in and the real
+   disc genuinely crossfade — both discs drawn with complementary alphas —
+   so total moonlight never dips and the moon never vanishes mid-night or
+   teleports. Dissolve, never slide: the two spots are unrelated, so a
+   position lerp would swing the moon across the sky (rejected). Each disc
+   lights its own water column in proportion to its alpha.
 3. **Palette lookup** — smoothstep-interpolated stops keyed to altitude:
    skyN/skyM/skyF, halo+haloA, coreA, waveHi/waveLo, cloudA, poolA.
 4. **Renderers** — one full-viewport canvas, drawn per frame in this order:
@@ -55,7 +61,20 @@ brighten them without the owner's approval.
    moon (earthshine disc + two-arc lit region: limb semicircle + elliptical
    terminator so the horns taper; halo alpha scales with illuminated
    fraction), sun halo, sun core (modest — brightness lives in the halo and
-   sky response, not the disc), cirrus, wave layers, with per-slope lighting.
+   sky response, not the disc), green flash (when active), cirrus, wave
+   layers, with per-slope lighting.
+
+### Green flash
+
+The setting sun's last sliver can wink emerald: a ~1.6 s squashed gleam
+perched on the horizon line at the sun's spot, drawn between sun core and
+cirrus. Triggers 1-in-1000 when a live sunset's upper limb crosses alt
+−0.8° (never while scrubbing), and on demand from the panel's
+"green flash" button (below the scrubber), which parks the scrubber at
+today's sunset and plays it. Its color is the palette's own sunset halo
+with the red and green channels traded — the one sanctioned green; do not
+introduce a literal green hex. No flash under prefers-reduced-motion (it
+is an animation; the button still parks the scrubber at sunset).
 
 ### Waves
 
@@ -112,8 +131,8 @@ reports banding, suspect cloud geometry first, not the grain.
   writeText can hang unsettled) showing a check-icon "copied" pill.
 - Status chip (top right): phase word + palette-tinted orb; expands on
   hover/focus/open with time, day, and basis; click opens the panel with
-  the time scrubber (0–1439 step 5), live button, precise-location button,
-  and mode line.
+  the time scrubber (0–1439 step 5), green-flash button, live button,
+  precise-location button, and mode line.
 - Hovering the sun or moon shows a card: identity/phase/position plus the
   live sea impact (swell/chop multipliers, tide factor, drift direction).
   `main` has `pointer-events: none` with links/buttons re-enabled so hovers
@@ -128,6 +147,10 @@ reports banding, suspect cloud geometry first, not the grain.
   content on wide/ultrawide screens, but exempts low moons (y ≥ 0.54H) so
   horizon-hugging crescents stay phase-honest. On very short screens with
   no sky left (landscape phones) it tucks into the free upper-left corner.
+  Gate strength (`moonGate`) ramps over ~5% of the viewport at each
+  boundary (and over an altitude band at the wide gate's horizon
+  exemption) — hard on/off gates used to snap the moon a couple hundred
+  px in one frame as it drifted across them; keep the easing.
 - Cirrus band heights are calibrated: too thin renders as hairline streaks
   on large screens, too fat bands the night sky (current ry
   0.036/0.030/0.024 across the three bands).
@@ -164,7 +187,12 @@ that stales. Keep it that way.
   opacity 0. For visual tests, screenshot a debug copy with
   `<style>*{animation-duration:0.01s!important;animation-delay:0s!important;}</style>`
   injected, or use `--force-prefers-reduced-motion` (also validates that
-  path). This is a headless artifact only.
+  path). This is a headless artifact only. The same freeze stops
+  `dt`-driven canvas transients (the green flash) from advancing, and
+  wall-clock `--timeout` captures race ahead of `load`-scheduled timers —
+  to screenshot the flash, sed a debug copy of scene.js that pins its
+  envelope (`fe = 1`, expiry `9e9`) and click `#flash-btn` from an
+  injected DOMContentLoaded script.
 - **Gotcha 2**: new headless Chrome enforces a ~500px minimum window width.
   For mobile-width tests, wrap the page in an `<iframe style="width:390px">`
   harness page.

@@ -177,6 +177,7 @@ var W = 0, H = 0;
 var AMP = 1; // wave amplitudes are tuned in px for a 1600px viewport; scale down on phones
 var contentTop = 1e9; // top of the name, so the moon can stay clear of the content
 var hoverSun = null, hoverMoon = null, lastSea = null; // for the sky hover card
+var flashT = -1; // seconds into the green flash; < 0 = idle
 
 function measureContent() {
 	var el = document.querySelector('main h1');
@@ -260,6 +261,51 @@ function radial(x, y, r, stops) {
 	return g;
 }
 
+// Content clearance for the moon. Gate strength ramps over ~5% of the
+// viewport (and over a band of altitude at the wide gate's horizon
+// exemption) so the lift eases in as the moon drifts across a boundary —
+// an on/off gate snaps the moon a couple hundred px in a single frame.
+function moonGate(mp) {
+	var mOff = Math.abs(mp.x - W / 2);
+	var ease = W * 0.05;
+	// content band: always lifts a moon that sits over the centered column
+	var g = 1 - smooth(clamp((mOff - (Math.min(W * 0.45, 360) + 84)) / ease, 0, 1));
+	// wider gate for mid-sky moons parked beside the content on wide
+	// screens; fades out toward the horizon so low crescents keep hugging it
+	var g2 = (1 - smooth(clamp((mOff - (W * 0.30 + 84)) / ease, 0, 1)))
+	       * smooth(clamp((H * 0.54 - mp.y) / (H * 0.06), 0, 1));
+	if (g2 > g) g = g2;
+	if (g <= 0) return mp;
+	var clearY = Math.min(0.24 * H, contentTop - 52);
+	// no sky left (landscape phones): tuck into the free upper-left corner
+	if (clearY < 30) return { x: Math.max(56, W * 0.07), y: Math.max(36, H * 0.12) };
+	return { x: mp.x, y: lerp(mp.y, Math.min(mp.y, clearY), g) };
+}
+
+function moonDisc(mp, a, pal, moon) {
+	var r = 19;
+	// the halo must agree with the phase: a sliver barely glows,
+	// a full moon earns its light (small floor so new moons exist)
+	ctx.fillStyle = radial(mp.x, mp.y, 84, [
+		[0, css(pal.halo, (0.03 + 0.13 * moon.frac) * a)], [1, css(pal.halo, 0)]
+	]);
+	ctx.fillRect(mp.x - 84, mp.y - 84, 168, 168);
+	// earthshine: the whole sphere, barely there, sells the crescent
+	ctx.beginPath();
+	ctx.arc(mp.x, mp.y, r, 0, TAU);
+	ctx.fillStyle = css(WHITE, 0.09 * a);
+	ctx.fill();
+	// lit side: half limb closed by an elliptical terminator, so the
+	// horns taper to points; lit limb faces the sun's side of the sky
+	var k = 2 * moon.frac - 1;
+	var rot = moon.waxing ? 0 : Math.PI;
+	var lit = new Path2D();
+	lit.ellipse(mp.x, mp.y, r, r, rot, -Math.PI / 2, Math.PI / 2, false);
+	lit.ellipse(mp.x, mp.y, Math.abs(k) * r, r, rot, Math.PI / 2, Math.PI * 1.5, k < 0);
+	ctx.fillStyle = css(mix(pal.halo, WHITE, 0.85), 0.95 * a);
+	ctx.fill(lit);
+}
+
 function draw(dt, sun, pal, moon) {
 	var p = toScreen(sun.alt, sun.az, W, H);
 	var sea = seaState(sun, moon);
@@ -280,56 +326,22 @@ function draw(dt, sun, pal, moon) {
 
 	// 2. moon — the real one: true phase for the date, lit limb toward the
 	// sun (west when waxing, east when waning), drawn only when it is
-	// actually above the horizon on a dark sky
-	var mp = null;
-	// crossfade between the fallback arc and the real position instead of
-	// sliding between them: the arc moon dims away as the real moon rises,
-	// which reads far better in motion than a swinging position lerp
-	var mFade = moon.vis * smooth(Math.abs(moon.w * 2 - 1));
-	if (mFade > 0.01) {
-		mp = moon.w >= 0.5
-			? toScreen(moon.real.alt, moon.real.az, W, H)
-			: toScreen(moon.arc.alt, moon.arc.az, W, H);
-		// keep the moon clear of the content column on any viewport: when it
-		// would sit over the centered name/pills/fingerprint band, lift it
-		// above the measured content top — and on very short screens with no
-		// sky left (landscape phones), tuck it into the free upper-left corner.
-		// Two gates: the content band itself (readability — always clamps),
-		// and a wider one that scales with viewport for mid-sky moons, which
-		// otherwise park at pill height beside the content on wide screens.
-		// The wide gate exempts low moons (y ≥ 0.54H) so the phase-honest
-		// horizon-hugging crescents keep hugging the horizon.
-		var mOff = Math.abs(mp.x - W / 2);
-		if (mOff < Math.min(W * 0.45, 360) + 84 ||
-		    (mOff < W * 0.30 + 84 && mp.y < H * 0.54)) {
-			var clearY = Math.min(0.24 * H, contentTop - 52);
-			if (clearY < 30) {
-				mp = { x: Math.max(56, W * 0.07), y: Math.max(36, H * 0.12) };
-			} else {
-				mp.y = Math.min(mp.y, clearY);
-			}
-		}
-		var r = 19;
-		// the halo must agree with the phase: a sliver barely glows,
-		// a full moon earns its light (small floor so new moons exist)
-		ctx.fillStyle = radial(mp.x, mp.y, 84, [
-			[0, css(pal.halo, (0.03 + 0.13 * moon.frac) * mFade)], [1, css(pal.halo, 0)]
-		]);
-		ctx.fillRect(mp.x - 84, mp.y - 84, 168, 168);
-		// earthshine: the whole sphere, barely there, sells the crescent
-		ctx.beginPath();
-		ctx.arc(mp.x, mp.y, r, 0, TAU);
-		ctx.fillStyle = css(WHITE, 0.09 * mFade);
-		ctx.fill();
-		// lit side: half limb closed by an elliptical terminator, so the
-		// horns taper to points; lit limb faces the sun's side of the sky
-		var k = 2 * moon.frac - 1;
-		var rot = moon.waxing ? 0 : Math.PI;
-		var lit = new Path2D();
-		lit.ellipse(mp.x, mp.y, r, r, rot, -Math.PI / 2, Math.PI / 2, false);
-		lit.ellipse(mp.x, mp.y, Math.abs(k) * r, r, rot, Math.PI / 2, Math.PI * 1.5, k < 0);
-		ctx.fillStyle = css(mix(pal.halo, WHITE, 0.85), 0.95 * mFade);
-		ctx.fill(lit);
+	// actually above the horizon on a dark sky.
+	// The fallback arc and the real position genuinely crossfade while the
+	// real moon crosses alt 2°..12°: complementary alphas, so total
+	// moonlight holds steady and the arc stand-in dissolves into the real
+	// moon instead of the sky going moonless mid-night and the disc
+	// teleporting. The two spots are unrelated, so a position lerp would
+	// swing the moon across the sky — dissolve, never slide.
+	var mReal = moon.vis * smooth(moon.w);
+	var mArc = moon.vis - mReal;
+	var moonShows = [];
+	if (mArc > 0.01) moonShows.push({ p: moonGate(toScreen(moon.arc.alt, moon.arc.az, W, H)), a: mArc });
+	if (mReal > 0.01) moonShows.push({ p: moonGate(toScreen(moon.real.alt, moon.real.az, W, H)), a: mReal });
+	var mp = null, mBest = 0;
+	for (var mi = 0; mi < moonShows.length; mi++) {
+		moonDisc(moonShows[mi].p, moonShows[mi].a, pal, moon);
+		if (moonShows[mi].a > mBest) { mBest = moonShows[mi].a; mp = moonShows[mi].p; }
 	}
 
 	// 3. sun halo — carries the brightness; doubles as the twilight horizon glow
@@ -352,6 +364,33 @@ function draw(dt, sun, pal, moon) {
 			[1, css(pal.halo, 0)]
 		]);
 		ctx.fillRect(p.x - cr, p.y - cr, cr * 2, cr * 2);
+	}
+
+	// 4b. green flash — the rare emerald wink as the setting sun's last
+	// sliver slips under: 1-in-1000 at a live sunset, or on demand from
+	// the panel button. Its color is the palette's own sunset halo with
+	// the red and green channels traded, so it stays in the family rather
+	// than introducing a foreign green.
+	if (flashT >= 0) {
+		flashT += dt;
+		if (flashT > 1.6) {
+			flashT = -1;
+		} else {
+			var fe = smooth(clamp(flashT / 0.3, 0, 1)) * (1 - smooth(clamp((flashT - 0.7) / 0.9, 0, 1)));
+			var fg = [pal.halo[1], pal.halo[0], pal.halo[2]];
+			ctx.save();
+			// perched on the horizon line at the sun's spot, squashed flat —
+			// the flash is a gleam on the last sliver, not a floating ball
+			ctx.translate(p.x, Math.min(p.y, 0.60 * H) - 6);
+			ctx.scale(1, 0.45);
+			ctx.fillStyle = radial(0, 0, 34, [
+				[0, css(mix(fg, WHITE, 0.35), 0.85 * fe)],
+				[0.45, css(fg, 0.5 * fe)],
+				[1, css(fg, 0)]
+			]);
+			ctx.fillRect(-34, -34, 68, 68);
+			ctx.restore();
+		}
 	}
 
 	// 5. cirrus — thin bands, plainly visible at every hour, warmest and a
@@ -397,10 +436,12 @@ function draw(dt, sun, pal, moon) {
 		spec: pal.poolA * 2.2 * sunUp,
 		sigma: W * (0.09 + 0.28 * t01)
 	});
-	if (mp) {
-		var moonlight = mFade * (0.25 + 0.75 * moon.frac); // full moon lights more water
+	for (var ms = 0; ms < moonShows.length; ms++) {
+		// full moon lights more water; during the arc↔real crossfade each
+		// disc lights it in proportion, so the total never dips
+		var moonlight = moonShows[ms].a * (0.25 + 0.75 * moon.frac);
 		sources.push({
-			x: mp.x,
+			x: moonShows[ms].p.x,
 			amb: 0.18 * moonlight,
 			spec: pal.poolA * 5 * moonlight, // the cool pool under the moon
 			sigma: W * 0.12
@@ -473,9 +514,15 @@ var modeLine = document.getElementById('mode-line');
 var cachedSun = null, cachedPal = null, cachedMoon = null, cachedMinute = -1;
 
 function refreshSun() {
+	var prevAlt = cachedSun ? cachedSun.alt : null;
 	cachedSun = computeSun();
 	cachedPal = paletteAt(cachedSun.alt);
 	cachedMoon = moonState(simDate(), cachedSun);
+	// green flash: 1-in-1000 chance the minute a live sunset's upper limb
+	// slips under (alt −0.8° ≈ refraction + solar semidiameter)
+	if (sim == null && !reduced && prevAlt != null &&
+	    prevAlt > -0.8 && cachedSun.alt <= -0.8 && cachedSun.H > 0 &&
+	    Math.random() < 0.001) flashT = 0;
 	measureContent();
 	updateChip();
 }
@@ -514,6 +561,23 @@ liveBtn.addEventListener('click', function () {
 	syncScrub();
 	refreshSun();
 	if (reduced) drawOnce();
+});
+
+document.getElementById('flash-btn').addEventListener('click', function () {
+	// walk the afternoon to the minute the upper limb slips under, park
+	// the scrubber there, and play the flash; under reduced motion just
+	// park at sunset (the flash is an animation)
+	var d = simDate(), found = null, prevA = null;
+	for (var m = 720; m < 1440 && found == null; m++) {
+		d.setHours(0, m, 0, 0);
+		var alt = (mode.precise ? preciseSun(d, mode.lat, mode.lon) : approxSun(d)).alt;
+		if (prevA != null && prevA > -0.8 && alt <= -0.8) found = m;
+		prevA = alt;
+	}
+	sim = found == null ? 1140 : found; // no sunset at this latitude today: 19:00 stands in
+	scrub.value = sim;
+	refreshSun();
+	if (reduced) drawOnce(); else flashT = 0;
 });
 
 geoBtn.addEventListener('click', function () {
