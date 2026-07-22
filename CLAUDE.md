@@ -48,12 +48,20 @@ brighten them without the owner's approval.
    **phase-honest fallback arc** — crescents hug the horizon on the sun's
    side (west after dusk, east before dawn), only fuller moons ride high.
    A crescent high at midnight is astronomically impossible; keep it that way.
-   While the real moon crosses alt 2°–12° the arc stand-in and the real
-   disc genuinely crossfade — both discs drawn with complementary alphas —
-   so total moonlight never dips and the moon never vanishes mid-night or
-   teleports. Dissolve, never slide: the two spots are unrelated, so a
-   position lerp would swing the moon across the sky (rejected). Each disc
-   lights its own water column in proportion to its alpha.
+   The stand-in MOVES like a body, not a parked prop: its altitude
+   follows a night-progress track (crescents slope along the horizon —
+   waxing sink toward their western setting, waning climb toward their
+   eastern rise — fuller moons dome across midnight), and it descends
+   toward the horizon again by dawn. The real↔arc handoff is
+   direction-aware so the two tracks always JOIN: a rising real moon is
+   met low (the arc glides to the rise point; crossfade window alt
+   2°–12°), a setting one hands off high (window alt 10°–24°) with the
+   az-aligned stand-in inheriting the sky above it — chasing a setter
+   down to the horizon and returning drew a V-shaped bounce in the
+   track. Both windows and the meet-glide blend by the moon's hour
+   angle (`setF`) so nothing steps at culmination. During a handoff both
+   discs draw with complementary alphas, so total moonlight never dips,
+   and each lights its own water column in proportion to its alpha.
 3. **Palette lookup** — smoothstep-interpolated stops keyed to altitude:
    skyN/skyM/skyF, halo+haloA, coreA, waveHi/waveLo, cloudA, poolA.
 4. **Renderers** — one full-viewport canvas, drawn per frame in this order:
@@ -158,7 +166,14 @@ reports banding, suspect cloud geometry first, not the grain.
   Gate strength (`moonGate`) ramps over ~5% of the viewport at each
   boundary (and over an altitude band at the wide gate's horizon
   exemption) — hard on/off gates used to snap the moon a couple hundred
-  px in one frame as it drifted across them; keep the easing.
+  px in one frame as it drifted across them; keep the easing. The lift
+  COMPRESSES rather than flattens (horizon → clearY, highest sky →
+  clearY − 0.166H, factor 0.32): a gated moon still rises and falls
+  like the sun does — a flat clamp turned the whole night into a
+  horizontal rail. Live mode recomputes sun/moon every frame
+  (`refreshLite`; chip and content measurement stay on a minute
+  cadence) — the per-minute position cache made track glides land as
+  visible once-a-minute hops.
 - Cirrus band heights are calibrated: too thin renders as hairline streaks
   on large screens, too fat bands the night sky (current ry
   0.036/0.030/0.024 across the three bands).
@@ -183,7 +198,12 @@ that stales. Keep it that way.
 
 - `?t=<decimal hours>` simulates any time of day (e.g. `?t=19.2` sunset).
 - `window.__sim`: `set(minutes)`, `live()`, `place(lat, lon)`,
-  `state()` → `{sun, moon}`.
+  `state()` → `{sun, moon, screen}` — `screen` is what is actually drawn:
+  sun position and gated moon discs in px. To verify sun/moon TRACKS (not
+  just single frames), scrub `set()` across the whole day collecting
+  `state().screen` and plot the points on an overlay canvas — flat rails,
+  bounces, and handoff teleports are invisible in static frames but jump
+  out of a path plot.
 - Headless rendering from WSL uses Windows Chrome:
   `"/mnt/c/Program Files/Google/Chrome/Application/chrome.exe" --headless
   --disable-gpu --hide-scrollbars --window-size=1600,900
