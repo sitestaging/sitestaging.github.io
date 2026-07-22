@@ -178,6 +178,7 @@ var AMP = 1; // wave amplitudes are tuned in px for a 1600px viewport; scale dow
 var contentTop = 1e9; // top of the name, so the moon can stay clear of the content
 var hoverSun = null, hoverMoon = null, lastSea = null; // for the sky hover card
 var flashT = -1; // seconds into the green flash; < 0 = idle
+var flashMelt = 0; // how melted-out the disc is; holds after the flash so the sun can't pop back
 
 function measureContent() {
 	var el = document.querySelector('main h1');
@@ -354,43 +355,54 @@ function draw(dt, sun, pal, moon) {
 	// 4. sun core — intentionally modest; the profile holds a short plateau
 	// then falls off harder, so the disc keeps a findable edge at mid
 	// altitudes without raising peak brightness (crosses the old profile's
-	// value at r=0.32, dimmer skirt beyond)
-	if (pal.coreA > 0.002) {
+	// value at r=0.32, dimmer skirt beyond).
+	// During a green flash the core melts out as the bead brightens — the
+	// flash IS the disc's last sliver, so the two must never coexist. The
+	// melt then HOLDS while the sun stays set (the bead fades alone): if
+	// it recovered with the envelope the disc would pop back from the
+	// dead a second after its own sunset. Scrubbing anywhere else, or the
+	// next sunrise, releases it.
+	if (!(sun.alt <= -4.0 && sun.H > 0)) flashMelt = 0;
+	var fe = 0;
+	if (flashT >= 0) {
+		flashT += dt;
+		if (flashT > 1.4) flashT = -1;
+		else fe = smooth(clamp(flashT / 0.12, 0, 1)) * (1 - smooth(clamp((flashT - 0.55) / 0.75, 0, 1)));
+		flashMelt = Math.max(flashMelt, smooth(clamp(flashT / 0.12, 0, 1)));
+	}
+	var coreA = pal.coreA * (1 - flashMelt);
+	if (coreA > 0.002) {
 		var cr = 72 * clamp(W / 1100, 0.62, 1);
 		ctx.fillStyle = radial(p.x, p.y, cr, [
-			[0, css(WHITE, pal.coreA)],
-			[0.22, css(WHITE, pal.coreA * 0.72)],
-			[0.42, css(mix(pal.halo, WHITE, 0.55), pal.coreA * 0.28)],
+			[0, css(WHITE, coreA)],
+			[0.22, css(WHITE, coreA * 0.72)],
+			[0.42, css(mix(pal.halo, WHITE, 0.55), coreA * 0.28)],
 			[1, css(pal.halo, 0)]
 		]);
 		ctx.fillRect(p.x - cr, p.y - cr, cr * 2, cr * 2);
 	}
 
-	// 4b. green flash — the rare emerald wink as the setting sun's last
-	// sliver slips under: 1-in-1000 at a live sunset, or on demand from
-	// the panel button. Its color is the palette's own sunset halo with
-	// the red and green channels traded, so it stays in the family rather
-	// than introducing a foreign green.
-	if (flashT >= 0) {
-		flashT += dt;
-		if (flashT > 1.6) {
-			flashT = -1;
-		} else {
-			var fe = smooth(clamp(flashT / 0.3, 0, 1)) * (1 - smooth(clamp((flashT - 0.7) / 0.9, 0, 1)));
-			var fg = [pal.halo[1], pal.halo[0], pal.halo[2]];
-			ctx.save();
-			// perched on the horizon line at the sun's spot, squashed flat —
-			// the flash is a gleam on the last sliver, not a floating ball
-			ctx.translate(p.x, Math.min(p.y, 0.60 * H) - 6);
-			ctx.scale(1, 0.45);
-			ctx.fillStyle = radial(0, 0, 34, [
-				[0, css(mix(fg, WHITE, 0.35), 0.85 * fe)],
-				[0.45, css(fg, 0.5 * fe)],
-				[1, css(fg, 0)]
-			]);
-			ctx.fillRect(-34, -34, 68, 68);
-			ctx.restore();
-		}
+	// 4b. green flash — the emerald wink as the disc slips behind the
+	// water (the scene's true horizon is the back wave's silhouette, not
+	// alt 0): a thin flattened bead hugging that surface at the sun's x,
+	// drawn before the waves so the water occludes its lower half and it
+	// reads as sitting ON the horizon. Emerald is recomposed from the
+	// palette's own sunset-halo channels — no foreign hex — and the bead
+	// shimmers slightly, the way refraction boils at the real horizon.
+	if (fe > 0) {
+		var gy = surfaceY(LAYERS[0], p.x, sea) - 2;
+		var fg = [pal.halo[1] * 0.3, pal.halo[0], pal.halo[2] * 0.85];
+		var fl = 1 + 0.08 * Math.sin(flashT * 55);
+		ctx.save();
+		ctx.translate(p.x, gy);
+		ctx.scale(fl, 0.22);
+		ctx.fillStyle = radial(0, 0, 42, [
+			[0, css(mix(fg, WHITE, 0.55), 0.95 * fe)],
+			[0.3, css(fg, 0.8 * fe)],
+			[1, css(fg, 0)]
+		]);
+		ctx.fillRect(-42, -42, 84, 84);
+		ctx.restore();
 	}
 
 	// 5. cirrus — thin bands, plainly visible at every hour, warmest and a
@@ -518,10 +530,11 @@ function refreshSun() {
 	cachedSun = computeSun();
 	cachedPal = paletteAt(cachedSun.alt);
 	cachedMoon = moonState(simDate(), cachedSun);
-	// green flash: 1-in-1000 chance the minute a live sunset's upper limb
-	// slips under (alt −0.8° ≈ refraction + solar semidiameter)
+	// green flash: 1-in-1000 chance the minute a live setting sun's disc
+	// slips behind the water (alt −4.2° ≈ where the disc meets the back
+	// wave's silhouette, this scene's true horizon — not alt 0)
 	if (sim == null && !reduced && prevAlt != null &&
-	    prevAlt > -0.8 && cachedSun.alt <= -0.8 && cachedSun.H > 0 &&
+	    prevAlt > -4.2 && cachedSun.alt <= -4.2 && cachedSun.H > 0 &&
 	    Math.random() < 0.001) flashT = 0;
 	measureContent();
 	updateChip();
@@ -564,14 +577,14 @@ liveBtn.addEventListener('click', function () {
 });
 
 document.getElementById('flash-btn').addEventListener('click', function () {
-	// walk the afternoon to the minute the upper limb slips under, park
-	// the scrubber there, and play the flash; under reduced motion just
-	// park at sunset (the flash is an animation)
+	// walk the afternoon to the minute the disc slips behind the water,
+	// park the scrubber there, and play the flash; under reduced motion
+	// just park there (the flash is an animation)
 	var d = simDate(), found = null, prevA = null;
 	for (var m = 720; m < 1440 && found == null; m++) {
 		d.setHours(0, m, 0, 0);
 		var alt = (mode.precise ? preciseSun(d, mode.lat, mode.lon) : approxSun(d)).alt;
-		if (prevA != null && prevA > -0.8 && alt <= -0.8) found = m;
+		if (prevA != null && prevA > -4.2 && alt <= -4.2) found = m;
 		prevA = alt;
 	}
 	sim = found == null ? 1140 : found; // no sunset at this latitude today: 19:00 stands in

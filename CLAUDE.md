@@ -66,15 +66,23 @@ brighten them without the owner's approval.
 
 ### Green flash
 
-The setting sun's last sliver can wink emerald: a ~1.6 s squashed gleam
-perched on the horizon line at the sun's spot, drawn between sun core and
-cirrus. Triggers 1-in-1000 when a live sunset's upper limb crosses alt
-−0.8° (never while scrubbing), and on demand from the panel's
-"green flash" button (below the scrubber), which parks the scrubber at
-today's sunset and plays it. Its color is the palette's own sunset halo
-with the red and green channels traded — the one sanctioned green; do not
-introduce a literal green hex. No flash under prefers-reduced-motion (it
-is an animation; the button still parks the scrubber at sunset).
+The scene's true horizon is the back wave's silhouette, not alt 0 — the
+disc visually slips behind the water near alt −4.2°, and that is the
+flash moment (an earlier build flashed at the astronomical −0.8°, which
+painted green on a still-visible sun and read as fake). The effect: over
+~1.4 s the sun core melts out (`flashMelt`) while a thin emerald bead
+(~84×18, squashed 0.22, slight shimmer) brightens ON the back wave's
+surface at the sun's x, drawn before the waves so the water occludes its
+lower half. The melt then HOLDS while the sun stays set — if it recovered
+with the envelope, the disc would pop back a second after its own sunset;
+scrubbing elsewhere or sunrise releases it. Bead color is emerald
+recomposed from the palette's sunset-halo channels
+(`[halo.g*0.3, halo.r, halo.b*0.85]`) — do not introduce a literal green
+hex. Triggers 1-in-1000 when a live setting sun crosses −4.2° (never
+while scrubbing), and on demand from the panel's "green flash" button
+(below the scrubber), which parks the scrubber at that minute and plays
+it. No flash under prefers-reduced-motion (it is an animation; the
+button still parks the scrubber).
 
 ### Waves
 
