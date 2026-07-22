@@ -126,43 +126,15 @@ function moonState(date, sun) {
 		Math.sin(s.dec) * Math.sin(m.dec) + Math.cos(s.dec) * Math.cos(m.dec) * Math.cos(s.ra - m.ra), -1, 1));
 	var frac = (1 - Math.cos(phi)) / 2;
 	var waxing = Math.sin(lm - ls) > 0;
-	// Fallback arc for when the real moon is below the horizon: it must stay
-	// phase-honest AND move like a celestial body — a parked, constant-
-	// altitude stand-in reads as pasted on while the sun sweeps its dome.
-	// Crescents slope along the horizon on the sun's side (waxing sink
-	// toward their western setting, waning climb toward their eastern
-	// rise, which also lands the dawn handoff next to the rising real
-	// moon); fuller moons dome across the night like the sun does by day.
-	var anti = (sun.az + 180) % 360;
-	var h = ((sun.H % 360) + 360) % 360;          // 0 at noon, 180 at midnight
-	var p = clamp((h - 105) / 150, 0, 1);         // night progress: dusk 0 → dawn 1
-	var peak = clamp(6 + 44 * frac, 6, 50);
-	var domey = smooth(clamp((frac - 0.3) / 0.45, 0, 1));
-	var slope = waxing ? 1 - p : p;
-	var shape = lerp(0.25 + 0.75 * slope, Math.sin(Math.PI * p), domey);
-	var arcAlt = 5 + (peak - 5) * clamp(shape, 0.06, 1);
-	var arcAz = waxing ? 276 + (anti - 276) * frac : 84 + (anti - 84) * frac;
-	// The handoff between real moon and stand-in must keep ONE coherent
-	// track, and rising and setting need opposite treatments. Rising
-	// (dawn): the stand-in glides down to MEET the rising real moon so
-	// the dissolve is between coincident points. Setting: hand off HIGH,
-	// before the final descent — the real moon dims out on its way down
-	// while the az-aligned stand-in inherits the sky above it; chasing it
-	// to the horizon and then returning drew a V-shaped bounce in the
-	// track. setF blends the two by hour angle so nothing steps at
-	// culmination, where a low moon flips from rising to setting with w
-	// otherwise computed from two different windows.
-	var setF = smooth(clamp(pos.H / 30 + 0.5, 0, 1)); // 0 rising → 1 setting
-	var meet = smooth(clamp(1 - Math.abs(pos.alt - lerp(7, 17, setF)) / 12, 0, 1));
-	arcAz = lerp(arcAz, pos.az, meet);
-	arcAlt = lerp(arcAlt, lerp(Math.max(pos.alt, 5), arcAlt, setF), meet);
+	// No stand-in, no fallback: the moon drawn is the real one, where it
+	// really is. When it is below the horizon the night is honestly
+	// moonless — which also means every track it traces is a genuine
+	// rise-arc-set, automatically consistent with the sun's geometry.
 	return {
 		frac: frac,
 		waxing: waxing,
 		vis: clamp((-5 - sun.alt) / 6, 0, 1),        // shown once the sun is well down
-		w: lerp(clamp((pos.alt - 2) / 10, 0, 1), clamp((pos.alt - 10) / 14, 0, 1), setF),
-		real: { alt: pos.alt, az: pos.az },
-		arc: { alt: arcAlt, az: arcAz }
+		real: { alt: pos.alt, az: pos.az }
 	};
 }
 
@@ -313,17 +285,16 @@ function moonGate(mp) {
 	return { x: mp.x, y: lerp(mp.y, t, g) };
 }
 
-// The discs actually on screen this frame: the arc stand-in and the real
-// moon crossfade with complementary alphas while the real moon crosses
-// alt 2°..12°. Shared by the renderer and the __sim testing hook so
-// tests see exactly what is drawn.
-function moonDiscs(moon) {
-	var mReal = moon.vis * smooth(moon.w);
-	var mArc = moon.vis - mReal;
-	var out = [];
-	if (mArc > 0.01) out.push({ kind: 'arc', p: moonGate(toScreen(moon.arc.alt, moon.arc.az, W, H)), a: mArc });
-	if (mReal > 0.01) out.push({ kind: 'real', p: moonGate(toScreen(moon.real.alt, moon.real.az, W, H)), a: mReal });
-	return out;
+// The moon actually on screen this frame: the real one, only when it is
+// really up. Alpha is the dark-sky gate times a horizon fade (alt
+// 1°..7° — a rising or setting moon dims into the thick air at the
+// horizon instead of popping). Returns [] on moonless skies. Shared by
+// the renderer and the __sim testing hook so tests see exactly what is
+// drawn.
+function moonDisplay(moon) {
+	var a = moon.vis * smooth(clamp((moon.real.alt - 1) / 6, 0, 1));
+	if (a <= 0.01) return null;
+	return { p: moonGate(toScreen(moon.real.alt, moon.real.az, W, H)), a: a };
 }
 
 function moonDisc(mp, a, pal, moon) {
@@ -370,18 +341,13 @@ function draw(dt, sun, pal, moon) {
 
 	// 2. moon — the real one: true phase for the date, lit limb toward the
 	// sun (west when waxing, east when waning), drawn only when it is
-	// actually above the horizon on a dark sky.
-	// The fallback arc and the real position genuinely crossfade while the
-	// real moon crosses alt 2°..12°: complementary alphas, so total
-	// moonlight holds steady and the arc stand-in dissolves into the real
-	// moon instead of the sky going moonless mid-night and the disc
-	// teleporting. The two spots are unrelated, so a position lerp would
-	// swing the moon across the sky — dissolve, never slide.
-	var moonShows = moonDiscs(moon);
-	var mp = null, mBest = 0;
-	for (var mi = 0; mi < moonShows.length; mi++) {
-		moonDisc(moonShows[mi].p, moonShows[mi].a, pal, moon);
-		if (moonShows[mi].a > mBest) { mBest = moonShows[mi].a; mp = moonShows[mi].p; }
+	// actually above the horizon on a dark sky. When it is down, the
+	// night is honestly moonless.
+	var mShow = moonDisplay(moon);
+	var mp = null;
+	if (mShow) {
+		moonDisc(mShow.p, mShow.a, pal, moon);
+		mp = mShow.p;
 	}
 
 	// 3. sun halo — carries the brightness; doubles as the twilight horizon glow
@@ -487,12 +453,10 @@ function draw(dt, sun, pal, moon) {
 		spec: pal.poolA * 2.2 * sunUp,
 		sigma: W * (0.09 + 0.28 * t01)
 	});
-	for (var ms = 0; ms < moonShows.length; ms++) {
-		// full moon lights more water; during the arc↔real crossfade each
-		// disc lights it in proportion, so the total never dips
-		var moonlight = moonShows[ms].a * (0.25 + 0.75 * moon.frac);
+	if (mShow) {
+		var moonlight = mShow.a * (0.25 + 0.75 * moon.frac); // full moon lights more water
 		sources.push({
-			x: moonShows[ms].p.x,
+			x: mShow.p.x,
 			amb: 0.18 * moonlight,
 			spec: pal.poolA * 5 * moonlight, // the cool pool under the moon
 			sigma: W * 0.12
@@ -566,8 +530,7 @@ var cachedSun = null, cachedPal = null, cachedMoon = null, cachedMinute = -1;
 
 // Lightweight per-frame refresh: positions and palette only. Live mode
 // runs this every frame so the sun and moon drift continuously — with a
-// once-a-minute cache their motion lands in visible discrete hops,
-// especially while the arc stand-in glides to meet a rising real moon.
+// once-a-minute cache their motion lands in visible discrete hops.
 function refreshLite() {
 	var prevAlt = cachedSun ? cachedSun.alt : null;
 	cachedSun = computeSun();
@@ -666,8 +629,9 @@ window.__sim = {
 	state: function () {
 		return {
 			sun: cachedSun, moon: cachedMoon,
-			// what is actually drawn: sun + gated moon discs in screen px
-			screen: { sun: toScreen(cachedSun.alt, cachedSun.az, W, H), moon: moonDiscs(cachedMoon) }
+			// what is actually drawn: sun + gated moon disc (null when
+			// the moon is down) in screen px
+			screen: { sun: toScreen(cachedSun.alt, cachedSun.az, W, H), moon: moonDisplay(cachedMoon) }
 		};
 	}
 };
@@ -743,9 +707,7 @@ window.addEventListener('pointermove', function (e) {
 	if (cachedMoon && near(hoverMoon, 55)) {
 		html = moonPhaseName(cachedMoon.frac, cachedMoon.waxing)
 			+ ' &middot; ' + Math.round(cachedMoon.frac * 100) + '% lit &middot; '
-			+ (cachedMoon.w > 0.5
-				? Math.round(cachedMoon.real.alt) + '&deg; up &middot; ' + COMPASS[Math.round(cachedMoon.real.az / 22.5) % 16]
-				: 'set below the horizon')
+			+ Math.round(cachedMoon.real.alt) + '&deg; up &middot; ' + COMPASS[Math.round(cachedMoon.real.az / 22.5) % 16]
 			+ '<br>tide &times;' + lastSea.tide.toFixed(2) + ' on the swell &middot; ' + driftWord(lastSea.flow);
 		tx = hoverMoon.x; ty = hoverMoon.y + 34;
 	} else if (cachedSun && cachedSun.alt > -6 && near(hoverSun, 85)) {

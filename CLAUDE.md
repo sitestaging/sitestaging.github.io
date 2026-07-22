@@ -2,7 +2,8 @@
 
 Personal landing page. A soft, abstract periwinkle world of layered wave
 curves under a sky lit by a simulated sun whose position is computed from
-real solar astronomy, and a moon with its real phase. Deliberately
+real solar astronomy, and a moon with its real phase at its real
+position (moonless nights included). Deliberately
 non-representational: the layers may read as hills, water, or snow, and
 that ambiguity is intentional.
 
@@ -43,25 +44,21 @@ brighten them without the owner's approval.
    Precise: SunCalc formulation from geolocation, strictly opt-in via the
    panel button. NEVER auto-prompt for geolocation.
 2. **Lunar engine** — low-precision ephemeris (SunCalc formulation) for real
-   position; phase from sun–moon separation. The moon shows only on a dark
-   sky (sun < −5°): at its real position when actually up, otherwise on a
-   **phase-honest fallback arc** — crescents hug the horizon on the sun's
-   side (west after dusk, east before dawn), only fuller moons ride high.
-   A crescent high at midnight is astronomically impossible; keep it that way.
-   The stand-in MOVES like a body, not a parked prop: its altitude
-   follows a night-progress track (crescents slope along the horizon —
-   waxing sink toward their western setting, waning climb toward their
-   eastern rise — fuller moons dome across midnight), and it descends
-   toward the horizon again by dawn. The real↔arc handoff is
-   direction-aware so the two tracks always JOIN: a rising real moon is
-   met low (the arc glides to the rise point; crossfade window alt
-   2°–12°), a setting one hands off high (window alt 10°–24°) with the
-   az-aligned stand-in inheriting the sky above it — chasing a setter
-   down to the horizon and returning drew a V-shaped bounce in the
-   track. Both windows and the meet-glide blend by the moon's hour
-   angle (`setF`) so nothing steps at culmination. During a handoff both
-   discs draw with complementary alphas, so total moonlight never dips,
-   and each lights its own water column in proportion to its alpha.
+   position; phase from sun–moon separation. **The moon drawn is the real
+   one, where it really is — there is no fallback or stand-in.** It shows
+   only on a dark sky (sun < −5°, the `vis` ramp) AND when actually above
+   the horizon, with a horizon fade (alt 1°–7°, `moonDisplay`) so it dims
+   into the thick air at the horizon instead of popping. Moonless nights
+   are CORRECT, not a bug: after a gibbous sets, before a late waning
+   moon rises, and around new moon (when the moon is up mostly by day)
+   the night sky simply has no moon. The owner chose this honesty over an
+   always-a-moon stand-in — an earlier fallback arc caused parked props,
+   flat tracks, and handoff artifacts; do not reintroduce one. Every
+   track the moon traces is a genuine rise-arc-set consistent with the
+   sun's geometry (e.g. a July gibbous sets WSW, well left of the summer
+   sun's WNW setting corner — that's real, not a bug). Tides in
+   `seaState` come from phase and work whether or not the moon is
+   visible.
 3. **Palette lookup** — smoothstep-interpolated stops keyed to altitude:
    skyN/skyM/skyF, halo+haloA, coreA, waveHi/waveLo, cloudA, poolA.
 4. **Renderers** — one full-viewport canvas, drawn per frame in this order:
@@ -199,7 +196,7 @@ that stales. Keep it that way.
 - `?t=<decimal hours>` simulates any time of day (e.g. `?t=19.2` sunset).
 - `window.__sim`: `set(minutes)`, `live()`, `place(lat, lon)`,
   `state()` → `{sun, moon, screen}` — `screen` is what is actually drawn:
-  sun position and gated moon discs in px. To verify sun/moon TRACKS (not
+  sun position and the gated moon disc in px (null when the moon is down). To verify sun/moon TRACKS (not
   just single frames), scrub `set()` across the whole day collecting
   `state().screen` and plot the points on an overlay canvas — flat rails,
   bounces, and handoff teleports are invisible in static frames but jump
